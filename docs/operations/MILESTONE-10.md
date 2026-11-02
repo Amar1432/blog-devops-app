@@ -84,7 +84,7 @@ Host Administration & Operational Tooling:
 | **10.1** | Availability Monitoring with Uptime Kuma | Implemented & Deployed | [`docs/operations/MONITORING.md`](./MONITORING.md) |
 | **10.2** | Container and Application Logging | Implemented & Verified | [`docs/operations/LOGGING.md`](./LOGGING.md) |
 | **10.3** | Host and Container Resource Monitoring | Implemented & Verified | [`docs/operations/RESOURCE-MONITORING.md`](./RESOURCE-MONITORING.md) |
-| **10.4** | Automated PostgreSQL Backups | Pending | `docs/operations/BACKUP-AND-RESTORE.md` |
+| **10.4** | Automated PostgreSQL Backups | Implemented & Verified | [`docs/operations/BACKUP-AND-RESTORE.md`](./BACKUP-AND-RESTORE.md) |
 | **10.5** | Isolated Restore and Disaster Recovery | Pending | `docs/operations/BACKUP-AND-RESTORE.md` |
 | **10.6** | Application Rollback & Configuration Recovery | Pending | `docs/operations/ROLLBACK.md` |
 | **10.7** | Incident Simulations & Milestone Closure | Pending | `docs/operations/INCIDENT-REPORTS/` |
@@ -230,7 +230,74 @@ RAM Usage:  [HEALTHY] 43% memory available.
 
 ---
 
-## 8. Definition of Done Checklist
+## 8. Phase 10.4 — PostgreSQL Backup Automation Evidence
+
+### 1. Manual Backup Run Output (`scripts/backup-postgres.sh`)
+```text
+=================================================================
+   PostgreSQL Automated Backup — 2026-11-02 19:32:59 UTC
+=================================================================
+Compose Spec:   /opt/devops-blog/compose.yaml
+Destination:    /opt/devops-blog/backups
+Target File:    devops_blog_backup_20261102_193259Z.dump
+Retention Cap:  7 days
+
+[1/3] Streaming pg_dump (-Fc custom format) from container...
+[2/3] Verifying backup integrity via pg_restore --list...
+[SUCCESS] Backup verified and stored: /opt/devops-blog/backups/devops_blog_backup_20261102_193259Z.dump (6.7K)
+
+[3/3] Applying backup retention policy (7 days)...
+No obsolete backup files found exceeding 7 days.
+
+=================================================================
+Backup process completed in 4s.
+=================================================================
+```
+
+### 2. Directory & File Permission Verification
+```text
+drwx------ 2 devopsadmin devopsadmin 4096 Nov  2 19:33 .
+-rw------- 1 devopsadmin devopsadmin 6824 Nov  2 19:33 devops_blog_backup_20261102_193259Z.dump
+-rw------- 1 devopsadmin devopsadmin  107 Nov  2 19:33 devops_blog_backup_20261102_193259Z.dump.sha256
+```
+*Permissions confirmation:* Directory is restricted to `0700` (`drwx------`); backup and checksum files are restricted to `0600` (`-rw-------`).
+
+### 3. Backup Verification Output (`scripts/verify-postgres-backup.sh`)
+```text
+=================================================================
+   PostgreSQL Backup Verification — devops_blog_backup_20261102_193259Z.dump
+=================================================================
+1. Validating SHA-256 checksum... [OK]
+2. Checking PostgreSQL custom format magic bytes... [OK] (PGDMP format confirmed)
+
+3. Inspecting Table of Contents (TOC) via pg_restore...
+; Archive created at 2026-11-02 19:33:01 UTC
+; dbname: devops_blog_prod
+; TOC Entries: 17
+; Compression: gzip
+; Format: CUSTOM
+; Dumped by pg_dump version: 16.15
+
+Selected TOC Entries:
+217; 1259 16402 TABLE public Post devops_blog_user
+216; 1259 16394 TABLE public User devops_blog_user
+215; 1259 16385 TABLE public _prisma_migrations devops_blog_user
+3468; 0 16402 TABLE DATA public Post devops_blog_user
+3467; 0 16394 TABLE DATA public User devops_blog_user
+3466; 0 16385 TABLE DATA public _prisma_migrations devops_blog_user
+3319; 2606 16410 CONSTRAINT public Post Post_pkey devops_blog_user
+3317; 2606 16401 CONSTRAINT public User User_pkey devops_blog_user
+3314; 2606 16393 CONSTRAINT public _prisma_migrations _prisma_migrations_pkey devops_blog_user
+3320; 1259 16413 INDEX public Post_published_publishedAt_idx devops_blog_user
+
+=================================================================
+Verification PASSED: backups/devops_blog_backup_20261102_193259Z.dump is a valid custom-format backup.
+=================================================================
+```
+
+---
+
+## 9. Definition of Done Checklist
 
 - [ ] **10.1**: Uptime Kuma is deployed persistently and is not publicly exposed without authentication.
 - [ ] **10.1**: Public homepage and API health are monitored.
@@ -239,9 +306,9 @@ RAM Usage:  [HEALTHY] 43% memory available.
 - [x] **10.2**: Container and Nginx log investigation procedures are documented.
 - [x] **10.2**: Docker log rotation is configured and verified.
 - [x] **10.3**: Host and container resource inspection is documented.
-- [ ] **10.4**: PostgreSQL backups run automatically.
-- [ ] **10.4**: Backup retention is implemented and tested safely.
-- [ ] **10.4**: Backup integrity is checked.
+- [x] **10.4**: PostgreSQL backups run automatically.
+- [x] **10.4**: Backup retention is implemented and tested safely.
+- [x] **10.4**: Backup integrity is checked.
 - [ ] **10.5**: A backup is restored into an isolated target.
 - [ ] **10.5**: Restored data is validated.
 - [ ] **10.6**: Application rollback is documented and tested.
