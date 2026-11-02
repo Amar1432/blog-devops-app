@@ -1,0 +1,25 @@
+{
+  "name": "devops-blog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@devops-blog/api & npm run dev --workspace=@devops-blog/web",
+    "dev:api": "npm run dev --workspace=@devops-blog/api",
+    "dev:web": "npm run dev --workspace=@devops-blog/web",
+    "build": "npm run build --workspace=@devops-blog/web",
+    "start": "npm run start --workspace=@devops-blog/api",
+    "db:generate": "npm run db:generate --workspace=@devops-blog/api",
+    "db:migrate": "npm run db:migrate --workspace=@devops-blog/api",
+    "db:deploy": "npm run db:deploy --workspace=@devops-blog/api",
+    "db:seed": "npm run db:seed --workspace=@devops-blog/api",
+    "db:studio": "npm run db:studio --workspace=@devops-blog/api"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

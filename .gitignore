@@ -1,0 +1,21 @@
+node_modules/
+dist/
+build/
+
+# Environment files (never commit real credentials)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Prisma
+apps/api/prisma/*.db
+apps/api/prisma/*.db-journal
