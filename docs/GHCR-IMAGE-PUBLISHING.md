@@ -290,7 +290,7 @@ docker image inspect ghcr.io/amar1432/devops-blog-web:latest --format '{{json .C
   - `devops-blog-web` package has `latest` and `sha-<commit>` tags.
 
 ### Experiment 4 — Pull request protection
-- **Action**: Create a feature branch `test/pr-validation`, push a commit, and open a Pull Request targeting `main`.
+- **Action**: Create a feature branch `test/pr-publish-guard`, push a commit, and open a Pull Request targeting `main`.
 - **Expected Outcome**:
   - `Backend CI`, `Frontend CI`, and `Docker Build Validation` execute.
   - `Publish Docker Images` is evaluated as false and completely skipped.
