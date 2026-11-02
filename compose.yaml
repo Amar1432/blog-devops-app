@@ -1,0 +1,114 @@
+# Docker Compose specification for the DevOps Blog.
+#
+# Modern Compose specification: no deprecated top-level `version` key.
+# All commands in this project load the environment file explicitly:
+#
+#   docker compose --env-file .env.compose <command>
+#
+# Compose interpolates ${VAR} from that file (or from the host shell).
+# Values used only inside containers are injected with `env_file` /
+# `environment`. No credentials are written in this file.
+
+name: devops-blog-compose
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set in .env.compose}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env.compose}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB must be set in .env.compose}
+    ports:
+      # Host-only binding: the database is reachable from this machine only.
+      - "127.0.0.1:${DB_HOST_PORT:-5433}:5432"
+    volumes:
+      - devops-blog-compose-postgres-data:/var/lib/postgresql/data
+    networks:
+      - compose-network
+    healthcheck:
+      # $$ escapes Compose interpolation so the variables expand inside the
+      # container's shell at runtime.
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Express API
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      # Root context: npm workspaces and the root lockfile live here.
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      # Runtime injection only. .dockerignore keeps this file out of the
+      # build context, so secrets never enter the image.
+      - .env.compose
+    ports:
+      # Host-only binding: the browser reaches the API through this port.
+      - "127.0.0.1:${API_HOST_PORT:-5001}:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - compose-network
+    healthcheck:
+      # The runtime image has no curl/wget, so use Node's built-in fetch.
+      # /api/health returns 503 when the database is unreachable.
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Nginx serving the React build
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Build-time value baked into the JavaScript bundle. It must be the
+        # host-published API URL because the browser is outside Docker.
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5001/api}
+    ports:
+      - "${WEB_HOST_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - compose-network
+    healthcheck:
+      # nginx:alpine ships BusyBox wget.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+networks:
+  compose-network:
+    # Explicit name: otherwise Compose prefixes it with the project name.
+    name: devops-blog-compose-network
+    driver: bridge
+
+volumes:
+  devops-blog-compose-postgres-data:
+    # Explicit name keeps the Milestone 3 volume (devops-blog-postgres-data)
+    # untouched. `docker compose down -v` removes only this volume.
+    name: devops-blog-compose-postgres-data

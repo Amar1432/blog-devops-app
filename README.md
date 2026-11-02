@@ -1,6 +1,6 @@
 # DevOps Blog
 
-A small full-stack blogging application built as the foundation for a hands-on DevOps learning journey. Milestones 0–2 deliver a tested blog with a public reading experience and a JWT-protected admin area; Milestone 3 packages the frontend, backend and database as Docker containers.
+A small full-stack blogging application built as the foundation for a hands-on DevOps learning journey. Milestones 0–2 deliver a tested blog with a public reading experience and a JWT-protected admin area; Milestone 3 packages the frontend, backend and database as Docker containers; Milestone 4 orchestrates the multi-container stack with Docker Compose.
 
 ## Stack
 
@@ -39,13 +39,16 @@ A small full-stack blogging application built as the foundation for a hands-on D
 ├── docs
 │   ├── API.md
 │   ├── DEVELOPMENT.md
+│   ├── DOCKER-COMPOSE.md   # Docker Compose guide and experiments
 │   ├── DOCKER.md           # Docker guide and experiments
 │   ├── IMPLEMENTATION-PROMPT.md
 │   ├── MILESTONE-0-1-SPEC.md
 │   └── MILESTONE-3-DOCKER-SPEC.md
-├── package.json            # npm workspaces + root scripts
 ├── .dockerignore
-└── .gitignore
+├── .env.compose.example    # Docker Compose environment template
+├── .gitignore
+├── compose.yaml            # Docker Compose orchestration
+└── package.json            # npm workspaces + root scripts
 ```
 
 ## Features
@@ -206,6 +209,55 @@ docker run -d --name devops-blog-web --network devops-blog-network -p 8080:80 de
 
 > macOS note: AirPlay Receiver listens on port 5000. If publishing fails with `address already in use`, disable AirPlay Receiver (System Settings → General → AirDrop & Handoff) or publish another host port and rebuild the frontend with the matching `VITE_API_URL`.
 
+## Docker Compose (Milestone 4)
+
+The full guide — Compose concepts, multi-container architecture, health checks, restart policies, explicit migrations, 9 practical experiments, and troubleshooting — is in [docs/DOCKER-COMPOSE.md](docs/DOCKER-COMPOSE.md).
+
+### 1. Configure environment variables
+
+```bash
+cp .env.compose.example .env.compose
+```
+
+Edit `.env.compose` to configure credentials (keep `DATABASE_URL` matching `POSTGRES_USER` and `POSTGRES_PASSWORD`).
+
+### 2. Start PostgreSQL
+
+```bash
+docker compose --env-file .env.compose up -d db
+```
+
+Wait until `docker compose --env-file .env.compose ps db` reports `(healthy)`.
+
+### 3. Apply migrations and seed the admin user
+
+Run one-off API containers:
+
+```bash
+docker compose --env-file .env.compose run --rm api npx prisma migrate deploy
+docker compose --env-file .env.compose run --rm api node prisma/seed.js
+```
+
+### 4. Start the complete application
+
+```bash
+docker compose --env-file .env.compose up -d
+```
+
+- Web application: http://localhost:8080
+- API health check: http://localhost:5001/api/health
+- PostgreSQL (host-only): `localhost:5433`
+
+### 5. Stop services
+
+```bash
+# Stop and remove containers and network (preserves database volume)
+docker compose --env-file .env.compose down
+
+# Stop and remove everything including database volume (destructive)
+docker compose --env-file .env.compose down -v
+```
+
 ## Root scripts
 
 | Script               | Description                                      |
@@ -235,12 +287,13 @@ docker run -d --name devops-blog-web --network devops-blog-network -p 8080:80 de
 
 - [Development guide](docs/DEVELOPMENT.md) — setup, scripts, migrations, troubleshooting.
 - [Testing guide](docs/TESTING.md) — test layers, database setup, coverage.
-- [Docker guide](docs/DOCKER.md) — container concepts, builds, networking, volumes and experiments.
+- [Docker guide](docs/DOCKER.md) — container concepts, builds, networking, volumes and experiments (Milestone 3).
+- [Docker Compose guide](docs/DOCKER-COMPOSE.md) — multi-container orchestration, health checks, restart policies, and experiments (Milestone 4).
 - [API reference](docs/API.md) — endpoints, payloads, error format.
 
 ## Scope
 
-Milestones 0–3 cover the application, its automated tests and Docker containerization. Docker Compose, CI/CD, Kubernetes, cloud infrastructure, Coolify, Redis, microservices, image uploads, comments, likes, public registration and complex role management are intentionally excluded and belong to later milestones.
+Milestones 0–4 cover the application, automated tests, standalone Docker containerization, and Docker Compose orchestration. CI/CD, GitHub Actions, GHCR, Coolify, Kubernetes, cloud infrastructure, Redis, microservices, image uploads, comments, likes, public registration, and production reverse proxies are intentionally excluded and belong to later milestones.
 
 ## Known limitations
 
