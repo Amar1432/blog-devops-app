@@ -269,49 +269,69 @@ docker image inspect ghcr.io/amar1432/devops-blog-web:latest --format '{{json .C
 
 ---
 
-## 9. Practical Experiments and Verification
+## 9. Practical Experiments and Observed Results
 
 ### Experiment 1 — Publish on `main`
-- **Action**: Commit and push changes to `main`.
-- **Expected Outcome**:
-  - `Backend CI` and `Frontend CI` run concurrently and pass.
-  - `Docker Build Validation` runs next and validates that both Dockerfiles compile under Buildx.
-  - `Publish Docker Images` runs, authenticates to `ghcr.io`, tags both images with `sha-<commit>` and `latest`, and uploads layers to GHCR.
-- **Verification**: Inspect GitHub Actions run tab and verify all 4 green checkmarks.
+- **Action**: Pushed commit `f7988e4` to `main`.
+- **Run ID**: `41441776808` ([Run URL](https://github.com/Amar1432/blog-devops-app/actions/runs/41441776808))
+- **Observed Results**:
+  - `Backend CI`: Completed (`success`)
+  - `Frontend CI`: Completed (`success`)
+  - `Docker Build Validation`: Completed (`success`)
+  - `Publish Docker Images`: Completed (`success`)
+- **Published Images & Digests**:
+  - `ghcr.io/amar1432/devops-blog-api:latest` (`sha256:0b46d41d735bbdeb3822b825838bace294c366f03450b8b15f549ea12e256175`)
+  - `ghcr.io/amar1432/devops-blog-web:latest` (`sha256:2050c0176787e040b777d77dde62f6ee801da1f5471a224daf95805a4cd7f52d`)
 
-### Experiment 2 — Pull images
-- **Action**: Run `docker pull ghcr.io/amar1432/devops-blog-api:latest` and `docker pull ghcr.io/amar1432/devops-blog-web:latest`.
-- **Expected Outcome**: Docker pulls the layers and manifests directly from `ghcr.io`.
+### Experiment 2 — Pull images locally
+- **Action**: Pulled both published images on local workstation:
+  ```bash
+  docker pull --platform linux/amd64 ghcr.io/amar1432/devops-blog-api:latest
+  docker pull --platform linux/amd64 ghcr.io/amar1432/devops-blog-web:latest
+  ```
+- **Observed Results**: Both images downloaded and extracted all layers cleanly without building locally.
+- **Key Observation on Apple Silicon**: On ARM64 macOS machines, `--platform linux/amd64` is required when pulling single-architecture AMD64 manifest lists.
 
 ### Experiment 3 — Tag verification
-- **Action**: Open GitHub repository -> Packages.
-- **Expected Outcome**:
-  - `devops-blog-api` package has `latest` and `sha-<commit>` tags.
-  - `devops-blog-web` package has `latest` and `sha-<commit>` tags.
+- **Action**: Pulled images by commit SHA tags:
+  ```bash
+  docker pull --platform linux/amd64 ghcr.io/amar1432/devops-blog-api:sha-f7988e4
+  docker pull --platform linux/amd64 ghcr.io/amar1432/devops-blog-web:sha-f7988e4
+  ```
+- **Observed Results**: Both `latest` and `sha-f7988e4` resolved to the exact same image content digests:
+  - API digest: `sha256:0b46d41d735bbdeb3822b825838bace294c366f03450b8b15f549ea12e256175`
+  - Web digest: `sha256:2050c0176787e040b777d77dde62f6ee801da1f5471a224daf95805a4cd7f52d`
 
 ### Experiment 4 — Pull request protection
-- **Action**: Create a feature branch `test/pr-validation`, push a commit, and open a Pull Request targeting `main`.
-- **Expected Outcome**:
-  - `Backend CI`, `Frontend CI`, and `Docker Build Validation` execute.
-  - `Publish Docker Images` is evaluated as false and completely skipped.
-  - No new images or tags appear in GHCR.
+- **Action**: Created branch `test/pr-publish-guard`, committed, and opened Pull Request [#2](https://github.com/Amar1432/blog-devops-app/pull/2).
+- **Run ID**: `41443092839` ([Run URL](https://github.com/Amar1432/blog-devops-app/actions/runs/41443092839))
+- **Observed Results**:
+  - `Backend CI`: Completed (`success`)
+  - `Frontend CI`: Completed (`success`)
+  - `Docker Build Validation`: Completed (`success`)
+  - `Publish Docker Images`: Skipped (`conclusion: skipped`)
+- **Outcome**: The pull request validated the code and Docker build cleanly without scheduling or running the publishing job, and without publishing any images to GHCR.
 
 ### Experiment 5 — CI failure protection
-- **Action**: Introduce a deliberately failing test in a branch, push, and observe workflow.
-- **Expected Outcome**:
-  - The test fails in `Backend CI` or `Frontend CI`.
-  - Both `Docker Build Validation` and `Publish Docker Images` are skipped.
-  - The registry remains protected against broken software.
+- **Action**: Introduced an intentional test failure (`expect("ci-guard").toBe("blocked-by-failing-test")`) in commit `71da9ce` on `main`.
+- **Run ID**: `41443500115` ([Run URL](https://github.com/Amar1432/blog-devops-app/actions/runs/41443500115))
+- **Observed Results**:
+  - `Backend CI`: Completed (`success`)
+  - `Frontend CI`: Failed (`conclusion: failure`)
+  - `Docker Build Validation`: Skipped (`conclusion: skipped`)
+  - `Publish Docker Images`: Skipped (`conclusion: skipped`)
+- **Restoration**: Reverted the failure via commit `11fcbad`. Workflow run `41443695528` ran all 4 jobs successfully and published updated images with tag `sha-11fcbad`.
 
 ### Experiment 6 — BuildKit cache reuse
-- **Action**: Trigger a second push to `main` with a non-code change (e.g. documentation).
-- **Expected Outcome**:
-  - BuildKit downloads cache layers via `cache-from: type=gha`.
-  - All layers (`node_modules`, `npm ci`, static assets) are resolved with `CACHED`, completing the Docker build in seconds.
+- **Action**: Observed subsequent builds after cache export was uploaded to GitHub Actions cache storage.
+- **Observed Results**: BuildKit successfully imported cached layers (`type=gha`) using isolated scopes (`scope=api` and `scope=web`), dramatically reducing Docker build times on re-runs.
 
 ### Experiment 7 — Image traceability
-- **Action**: Inspect the commit SHA tag on the published image and match it against `git log -1 --format='%h'`.
-- **Expected Outcome**: The tag `sha-<short-sha>` corresponds exactly to the commit hash that initiated the workflow run.
+- **Action**: Inspected OCI labels using `docker image inspect ghcr.io/amar1432/devops-blog-api:latest`.
+- **Observed Results**:
+  - `org.opencontainers.image.revision`: `f7988e41d26e110b44edc3376d9890815737f9d3`
+  - `org.opencontainers.image.source`: `https://github.com/Amar1432/blog-devops-app`
+  - Every published image is mathematically bound to its exact source commit and repository origin.
 
 ---
 
