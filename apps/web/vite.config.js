@@ -3,11 +3,6 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react()],
-  build: {
-    rollupOptions: {
-      input: "nonexistent-entry-file.html",
-    },
-  },
   server: {
     port: 5173,
     strictPort: true,
