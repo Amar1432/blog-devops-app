@@ -10,6 +10,8 @@
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "lint:api": "eslint apps/api",
+    "lint:web": "eslint apps/web",
     "dev": "npm run dev --workspace=@devops-blog/api & npm run dev --workspace=@devops-blog/web",
     "dev:api": "npm run dev --workspace=@devops-blog/api",
     "dev:web": "npm run dev --workspace=@devops-blog/web",
