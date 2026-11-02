@@ -1,6 +1,6 @@
 # DevOps Blog
 
-A small full-stack blogging application built as the foundation for a hands-on DevOps learning journey. Milestone 0–1 delivers a working blog with a public reading experience and a JWT-protected admin area.
+A small full-stack blogging application built as the foundation for a hands-on DevOps learning journey. Milestones 0–2 deliver a tested blog with a public reading experience and a JWT-protected admin area; Milestone 3 packages the frontend, backend and database as Docker containers.
 
 ## Stack
 
@@ -20,29 +20,35 @@ A small full-stack blogging application built as the foundation for a hands-on D
 ├── apps
 │   ├── api                 # Express REST API
 │   │   ├── prisma          # schema, migrations, seed script
-│   │   └── src
-│   │       ├── config      # environment configuration
-│   │       ├── controllers # request handlers
-│   │       ├── lib         # Prisma client
-│   │       ├── middleware  # auth, validation, errors
-│   │       ├── routes      # Express routers
-│   │       ├── utils       # AppError, slug helpers
-│   │       └── validators  # Zod schemas
+│   │   ├── src
+│   │   │   ├── config      # environment configuration
+│   │   │   ├── controllers # request handlers
+│   │   │   ├── lib         # Prisma client
+│   │   │   ├── middleware  # auth, validation, errors
+│   │   │   ├── routes      # Express routers
+│   │   │   ├── utils       # AppError, slug helpers
+│   │   │   └── validators  # Zod schemas
+│   │   └── Dockerfile      # multi-stage backend image
 │   └── web                 # React + Vite SPA
-│       └── src
-│           ├── components
-│           ├── lib         # API client, auth storage, formatting
-│           └── pages
+│       ├── src
+│       │   ├── components
+│       │   ├── lib         # API client, auth storage, formatting
+│       │   └── pages
+│       ├── Dockerfile      # Node build -> Nginx runtime
+│       └── nginx.conf      # static serving + SPA fallback
 ├── docs
 │   ├── API.md
 │   ├── DEVELOPMENT.md
+│   ├── DOCKER.md           # Docker guide and experiments
 │   ├── IMPLEMENTATION-PROMPT.md
-│   └── MILESTONE-0-1-SPEC.md
+│   ├── MILESTONE-0-1-SPEC.md
+│   └── MILESTONE-3-DOCKER-SPEC.md
 ├── package.json            # npm workspaces + root scripts
+├── .dockerignore
 └── .gitignore
 ```
 
-## Features (Milestone 0–1)
+## Features
 
 - Public post list and post detail pages (published posts only).
 - Admin login with a seeded account; no public registration.
@@ -53,6 +59,8 @@ A small full-stack blogging application built as the foundation for a hands-on D
 - Health endpoint that checks database connectivity.
 - Prisma migrations and an idempotent admin seed script.
 - Automated backend tests (unit, component, integration, API and end-to-end) with Jest and Supertest.
+- Automated React tests with Vitest and Testing Library.
+- Multi-stage Docker images for the web app and API, plus a PostgreSQL container (Milestone 3).
 
 ## Quick start
 
@@ -119,6 +127,85 @@ npm test
 
 The suite refuses to run against any database whose name does not end in `_test`.
 
+## Docker (Milestone 3)
+
+The full guide — concepts, networking, volumes, migrations, experiments and troubleshooting — is in [docs/DOCKER.md](docs/DOCKER.md). No Docker Compose is used.
+
+### 1. Create the network and persistent volume
+
+```bash
+docker network create devops-blog-network
+docker volume create devops-blog-postgres-data
+```
+
+### 2. Set local, non-committed credentials
+
+```bash
+export POSTGRES_USER=devops
+export POSTGRES_PASSWORD="$(openssl rand -hex 16)"
+export POSTGRES_DB=devops_blog
+export JWT_SECRET="$(openssl rand -hex 32)"
+export JWT_EXPIRES_IN=1d
+export ADMIN_EMAIL=admin@example.com
+export ADMIN_PASSWORD="$(openssl rand -hex 8)"
+export ADMIN_NAME="Site Admin"
+```
+
+### 3. Build both images from the repository root
+
+The root context is required because this is an npm workspace monorepo.
+
+```bash
+docker build -f apps/web/Dockerfile -t devops-blog-web:dev \
+  --build-arg VITE_API_URL=http://localhost:5000/api .
+
+docker build -f apps/api/Dockerfile -t devops-blog-api:dev .
+```
+
+`VITE_API_URL` is embedded at build time, so changing it requires rebuilding the web image.
+
+### 4. Start PostgreSQL
+
+```bash
+docker run -d --name devops-db --network devops-blog-network -p 5432:5432 \
+  -e POSTGRES_USER="$POSTGRES_USER" \
+  -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+  -e POSTGRES_DB="$POSTGRES_DB" \
+  -v devops-blog-postgres-data:/var/lib/postgresql/data \
+  postgres:16-alpine
+
+until docker exec devops-db pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"; do sleep 1; done
+```
+
+### 5. Start the API, migrate and seed
+
+```bash
+docker run -d --name devops-blog-api --network devops-blog-network -p 5000:5000 \
+  -e NODE_ENV=production -e PORT=5000 \
+  -e DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@devops-db:5432/${POSTGRES_DB}?schema=public" \
+  -e JWT_SECRET="$JWT_SECRET" -e JWT_EXPIRES_IN="$JWT_EXPIRES_IN" \
+  -e CORS_ORIGIN=http://localhost:8080 \
+  -e ADMIN_EMAIL="$ADMIN_EMAIL" -e ADMIN_PASSWORD="$ADMIN_PASSWORD" -e ADMIN_NAME="$ADMIN_NAME" \
+  devops-blog-api:dev
+
+docker exec devops-blog-api npx prisma migrate deploy
+docker exec devops-blog-api node prisma/seed.js
+```
+
+Migrations are applied explicitly, not automatically at container startup.
+
+### 6. Start the frontend
+
+```bash
+docker run -d --name devops-blog-web --network devops-blog-network -p 8080:80 devops-blog-web:dev
+```
+
+- Web: http://localhost:8080
+- API health: http://localhost:5000/api/health
+- PostgreSQL: `localhost:5432` (local development access; the API uses `devops-db:5432` internally)
+
+> macOS note: AirPlay Receiver listens on port 5000. If publishing fails with `address already in use`, disable AirPlay Receiver (System Settings → General → AirDrop & Handoff) or publish another host port and rebuild the frontend with the matching `VITE_API_URL`.
+
 ## Root scripts
 
 | Script               | Description                                      |
@@ -148,11 +235,12 @@ The suite refuses to run against any database whose name does not end in `_test`
 
 - [Development guide](docs/DEVELOPMENT.md) — setup, scripts, migrations, troubleshooting.
 - [Testing guide](docs/TESTING.md) — test layers, database setup, coverage.
+- [Docker guide](docs/DOCKER.md) — container concepts, builds, networking, volumes and experiments.
 - [API reference](docs/API.md) — endpoints, payloads, error format.
 
 ## Scope
 
-Milestone 0–1 intentionally excludes Docker, CI/CD, Kubernetes, cloud infrastructure, Coolify, Redis, microservices, image uploads, comments, likes, public registration and complex role management. Those belong to later milestones.
+Milestones 0–3 cover the application, its automated tests and Docker containerization. Docker Compose, CI/CD, Kubernetes, cloud infrastructure, Coolify, Redis, microservices, image uploads, comments, likes, public registration and complex role management are intentionally excluded and belong to later milestones.
 
 ## Known limitations
 
@@ -160,4 +248,5 @@ Milestone 0–1 intentionally excludes Docker, CI/CD, Kubernetes, cloud infrastr
 - The post list is not paginated.
 - There is a single admin role; every authenticated user has full access.
 - `npm audit` reports **development-only** advisories (Prisma CLI and Jest tooling). They are not part of the running application; upgrading to Prisma 7 would resolve the Prisma one but is deferred to keep this milestone simple.
-- Automated tests cover the backend only; React UI tests are not included yet.
+- The API Docker image is large (~917 MB) because it retains the Prisma CLI and workspace `node_modules` so migrations can run inside the container. Aggressive pruning was deliberately skipped; see [docs/DOCKER.md](docs/DOCKER.md#13-known-limitations).
+- On macOS, AirPlay Receiver occupies port 5000; see the Docker guide for the workaround.

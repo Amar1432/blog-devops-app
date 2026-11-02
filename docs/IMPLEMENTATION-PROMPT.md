@@ -1,121 +1,297 @@
-# Implementation Task: DevOps Blog — Milestone 0 & 1
+# Implementation Prompt — Milestone 3: Docker & Containerization
 
-You are acting as a Senior Full Stack Engineer.
+You are acting as a Senior DevOps Engineer and Full Stack Engineer.
 
-Your task is to implement the DevOps Blog application according to the Milestone 0–1 implementation specification.
+Your task is to containerize the existing DevOps Blog application according to:
 
-## Primary objective
+`docs/MILESTONE-3-DOCKER-SPEC.md`
 
-Build a simple, functional full-stack blogging application using:
+## 1. Project context
 
-- React + Vite + JavaScript
-- Node.js + Express
-- PostgreSQL
-- Prisma ORM
-- JWT authentication
+The DevOps Blog application has already completed:
 
-This project is specifically intended for learning DevOps. Therefore, prioritize simplicity, readability, maintainability and predictable behavior over architectural sophistication.
+- Milestone 0: Development environment and Git workflow.
+- Milestone 1: React + Node.js application development.
+- Milestone 2: Automated testing and quality checks.
 
-## Implementation rules
+The existing application must be preserved.
 
-1. Follow the agreed monorepo structure.
-2. Use JavaScript and ES modules.
-3. Use npm workspaces.
-4. Keep the backend modular but avoid unnecessary abstraction.
-5. Follow REST API conventions.
-6. Use Prisma migrations.
-7. Hash passwords using bcrypt.
-8. Protect administrative operations using JWT authentication.
-9. Validate incoming API requests using Zod.
-10. Implement consistent error handling.
-11. Keep frontend and backend configuration separate.
-12. Document all setup and development commands.
+Your task is to introduce Docker without unnecessarily changing the application architecture or business logic.
 
-## Development approach
+## 2. First inspect the repository
 
-Implement the project in the following sequence:
+Before making changes:
 
-1. Initialize repository and npm workspaces.
-2. Scaffold React + Vite.
-3. Initialize Express backend.
-4. Implement health endpoint.
-5. Configure PostgreSQL and Prisma.
-6. Create database models and migration.
-7. Implement admin seeding.
-8. Implement authentication APIs.
-9. Implement blog CRUD APIs.
-10. Implement React pages and components.
-11. Integrate frontend with backend.
-12. Verify the complete application.
-13. Write project documentation.
+1. Inspect the root package.json.
+2. Inspect the npm workspace configuration.
+3. Inspect package-lock.json.
+4. Inspect the frontend package.json.
+5. Inspect the backend package.json.
+6. Inspect the Prisma schema.
+7. Inspect the Prisma migrations.
+8. Inspect the existing environment variables.
+9. Inspect frontend API configuration.
+10. Inspect existing scripts and documentation.
 
-Do not skip ahead or introduce deployment infrastructure.
+Present a short implementation plan before proceeding.
 
-## Important constraints
+Identify any compatibility issues involving npm workspaces, Prisma, Node.js and Docker.
 
-DO NOT implement:
+Do not assume that the frontend and backend can be built using independent package directories. Respect the existing monorepo structure.
 
-- Docker or Docker Compose.
-- GitHub Actions.
-- Kubernetes.
-- Cloud infrastructure.
-- Coolify.
-- Redis.
-- Microservices.
-- Image uploads.
-- Comments or likes.
-- Public registration.
-- Complex role management.
-- Unrequested features.
+## 3. Implementation principles
 
-These will be implemented in subsequent learning milestones.
+- Follow the milestone specification.
+- Preserve existing application functionality.
+- Use existing dependency versions.
+- Use the existing package-lock.json.
+- Avoid unnecessary dependencies.
+- Prefer simple Docker configurations.
+- Explain important Docker concepts as they are implemented.
+- Never hardcode credentials.
+- Never copy actual environment files into Docker images.
+- Do not silently change application behavior.
+- Do not introduce Docker Compose.
 
-## Working agreement
+## 4. Implementation sequence
 
-Before implementation:
+Work in the following order.
 
-1. Inspect the existing repository.
-2. Present a brief implementation plan.
-3. Identify any missing configuration or prerequisites.
+### Step 1: Prepare Docker configuration
 
-During implementation:
+Create appropriate `.dockerignore` files.
 
-1. Work in small, logical steps.
-2. Explain important technical decisions.
-3. Avoid unnecessary dependencies.
-4. Do not silently change the agreed architecture.
-5. Do not hardcode secrets or credentials.
-6. Do not claim a feature works without verifying it.
-7. Run relevant commands and resolve errors.
+Explain why each excluded directory or file is excluded.
 
-After implementation:
+### Step 2: Dockerize the frontend
 
-1. Verify frontend startup.
-2. Verify backend startup.
-3. Verify database connectivity.
-4. Verify Prisma migrations.
-5. Verify admin seeding.
-6. Verify all API endpoints.
-7. Verify authentication and authorization.
-8. Verify the complete blog workflow.
-9. Check that `.env` files are excluded from Git.
-10. Update README.md, docs/DEVELOPMENT.md and docs/API.md.
+Create:
 
-## Final deliverables
+- `apps/web/Dockerfile`
+- `apps/web/nginx.conf`
+
+Requirements:
+
+- Multi-stage build.
+- Node.js build stage.
+- Nginx runtime stage.
+- React Router fallback support.
+- Correct frontend API URL configuration.
+- Small, practical runtime image.
+
+Verify that frontend assets are served correctly.
+
+### Step 3: Dockerize the backend
+
+Create:
+
+- `apps/api/Dockerfile`
+
+Requirements:
+
+- Compatible with the existing npm workspace.
+- Reproducible dependency installation.
+- Prisma client generation.
+- Correct production startup command.
+- Runtime environment variables.
+- Non-root execution where practical.
+
+Do not redesign the backend.
+
+### Step 4: Build Docker images
+
+Build the frontend and backend images.
+
+Verify:
+
+- Successful builds.
+- Correct image names.
+- Correct ports.
+- Image contents.
+- No leaked secrets.
+
+Explain Docker layers and caching.
+
+### Step 5: Start PostgreSQL
+
+Use the official PostgreSQL image.
+
+Create:
+
+- Database container named `devops-db`.
+- Persistent named volume `devops-blog-postgres-data`.
+- Custom network `devops-blog-network`.
+
+Configure database credentials using runtime environment variables.
+
+### Step 6: Start the backend container
+
+Connect it to the custom network.
+
+Use the database container hostname in DATABASE_URL.
+
+Publish backend port 5000.
+
+Wait for PostgreSQL readiness before running Prisma migrations.
+
+Apply migrations explicitly.
+
+Do not automatically execute migrations every time the backend container restarts.
+
+### Step 7: Start the frontend container
+
+Connect it to the custom network.
+
+Publish Nginx port 80 on host port 8080.
+
+Verify frontend-to-backend API requests from the browser.
+
+Remember that browser requests to localhost are different from requests made inside a Docker container.
+
+### Step 8: Verify the complete application
+
+Verify:
+
+- Frontend loads.
+- API health endpoint responds.
+- Database connection works.
+- Admin login works.
+- Blog listing works.
+- Blog creation works.
+- Blog editing works.
+- Blog deletion works.
+- Unpublished posts remain private.
+
+### Step 9: Run practical experiments
+
+Execute the experiments from the milestone specification:
+
+- Container lifecycle.
+- Docker networking.
+- Persistent storage.
+- Environment variable failure.
+- Image caching.
+- Container failure and recovery.
+
+Explain what happened and why.
+
+### Step 10: Documentation
+
+Create `docs/DOCKER.md`.
+
+Update README.md with the Docker workflow.
+
+Document every command required to reproduce the setup.
+
+## 5. Important technical constraints
+
+### No Docker Compose
+
+Do not create:
+
+- `compose.yaml`
+- `docker-compose.yml`
+
+Do not use Docker Compose commands.
+
+Every container must be created and managed using individual Docker commands.
+
+### Database persistence
+
+Never store PostgreSQL data only inside the container's writable layer.
+
+Use the named Docker volume specified in the milestone specification.
+
+### Networking
+
+The backend must use the PostgreSQL container hostname.
+
+Do not use localhost for the database connection from inside the backend container.
+
+### Frontend API configuration
+
+Inspect the actual Vite configuration.
+
+Remember that VITE_ variables are generally embedded into the production frontend during the build.
+
+Do not assume that changing a runtime environment variable inside Nginx automatically changes the already-built JavaScript bundle.
+
+Use the simplest correct configuration for this learning milestone.
+
+### Prisma
+
+Inspect the installed Prisma version and existing migration structure.
+
+Use the appropriate client generation and migration commands.
+
+Do not modify the database schema unless required by the existing application.
+
+## 6. Verification requirements
+
+Do not claim completion without executing available verification steps.
+
+Run:
+
+- Docker image builds.
+- Container startup checks.
+- API health checks.
+- Database connectivity checks.
+- Prisma migration checks.
+- Frontend availability checks.
+- Existing automated tests.
+- Existing lint and build commands where practical.
+
+If Docker is unavailable in the environment, explain exactly which checks could not be performed and provide the commands for the developer to execute locally.
+
+## 7. Final deliverables
 
 Provide:
 
-- Complete working source code.
-- Database schema and migrations.
-- Seed script.
-- Environment example files.
-- API documentation.
-- Development documentation.
-- Root-level development scripts.
-- A summary of implemented functionality.
-- Commands to run the application.
-- Any known limitations.
+1. Frontend Dockerfile.
+2. Backend Dockerfile.
+3. Nginx configuration.
+4. Dockerignore configuration.
+5. Working Docker build commands.
+6. Working container startup commands.
+7. Docker networking commands.
+8. PostgreSQL volume configuration.
+9. Prisma migration instructions.
+10. Docker documentation.
+11. Updated README.
+12. Verification results.
+13. Known limitations.
 
-Do not begin Milestone 2 until Milestone 0 and Milestone 1 have been implemented and verified.
+## 8. Do not implement future milestones
 
-The most important objective is to create a small, reliable application that we can progressively evolve into a production-deployed application while learning DevOps.
+Strictly exclude:
+
+- Docker Compose.
+- GitHub Actions.
+- CI/CD.
+- GHCR.
+- Coolify.
+- Linux server provisioning.
+- Cloud deployment.
+- Kubernetes.
+- Terraform.
+- Ansible.
+- Advanced monitoring.
+
+These will be implemented later.
+
+## 9. Final response
+
+After implementation, report:
+
+- What files were created or changed.
+- How each container works.
+- How to build and start the application.
+- How containers communicate.
+- How database persistence works.
+- What experiments were completed.
+- Which checks passed or failed.
+- Any remaining issues.
+
+Do not begin Milestone 4 until Milestone 3 acceptance criteria have been verified.
+
+Your goal is not just to containerize the application. Your goal is to help the developer understand Docker by implementing and experimenting with it.

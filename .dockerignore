@@ -1,0 +1,30 @@
+# Docker reads only the .dockerignore at the build-context root.
+# Both images are built from the repository root because this is an npm
+# workspace monorepo, so this single file covers both builds.
+
+# Dependencies and build output are recreated inside the image.
+**/node_modules
+**/dist
+**/coverage
+
+# Never send local secrets or environment files to the Docker daemon.
+**/.env
+**/.env.*
+
+# Version control and repository metadata.
+.git
+.gitignore
+
+# Logs.
+**/*.log
+npm-debug.log*
+
+# Local editor and OS files.
+**/.DS_Store
+.DS_Store
+.vscode
+.idea
+
+# Documentation is not needed to build or run the containers.
+docs
+README.md
