@@ -86,8 +86,7 @@ Host Administration & Operational Tooling:
 | **10.3** | Host and Container Resource Monitoring | Implemented & Verified | [`docs/operations/RESOURCE-MONITORING.md`](./RESOURCE-MONITORING.md) |
 | **10.4** | Automated PostgreSQL Backups | Implemented & Verified | [`docs/operations/BACKUP-AND-RESTORE.md`](./BACKUP-AND-RESTORE.md) |
 | **10.5** | Isolated Restore and Disaster Recovery | Implemented & Verified | [`docs/operations/BACKUP-AND-RESTORE.md`](./BACKUP-AND-RESTORE.md) |
-| **10.6** | Application Rollback & Configuration Recovery | Pending | `docs/operations/ROLLBACK.md` |
-| **10.6** | Application Rollback & Configuration Recovery | Pending | `docs/operations/ROLLBACK.md` |
+| **10.6** | Application Rollback & Configuration Recovery | Implemented & Verified | [`docs/operations/ROLLBACK.md`](./ROLLBACK.md) |
 | **10.7** | Incident Simulations & Milestone Closure | Pending | `docs/operations/INCIDENT-REPORTS/` |
 
 ---
@@ -369,7 +368,48 @@ Verified: Schema, User records (1), Post records (3), Checksums.
 
 ---
 
-## 10. Definition of Done Checklist
+## 10. Phase 10.6 — Application Rollback & Configuration Recovery Evidence
+
+### 1. Active Image Inspection & Digest Mapping
+Captured from the live production host:
+```text
+API Image: ["ghcr.io/amar1432/devops-blog-api:latest"]
+API Digest: "ghcr.io/amar1432/devops-blog-api@sha256:294032db1aeef6049941a8b2cd6d8e03fdb064fa27d003ab4ea0a8800d5983da"
+
+Web Image: ["ghcr.io/amar1432/devops-blog-web:latest"]
+Web Digest: "ghcr.io/amar1432/devops-blog-web@sha256:05486d41b87c374869749eb1795564f2b9a43676a3d41a16bdfb1d0faba25214"
+```
+
+### 2. Pre-Flight Configuration Validation
+- Nginx syntax test inside `proxy` container:
+  ```text
+  nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+  nginx: configuration file /etc/nginx/nginx.conf test is successful
+  ```
+- Docker Compose configuration syntax validation:
+  ```bash
+  docker compose config --quiet
+  # Exited with code 0 (valid)
+  ```
+
+### 3. Post-Rollback Smoke-Test Verification
+```bash
+# 1. Homepage returns HTTP 200
+curl -fsS -o /dev/null -w "%{http_code}\n" https://luffydev.duckdns.org/
+# Result: 200
+
+# 2. API health returns healthy database
+curl -fsS https://luffydev.duckdns.org/api/health
+# Result: {"status":"ok","database":"up",...}
+
+# 3. Post content intact
+curl -fsS https://luffydev.duckdns.org/api/posts | grep -q "First Production Post"
+# Result: Content verified
+```
+
+---
+
+## 11. Definition of Done Checklist
 
 - [ ] **10.1**: Uptime Kuma is deployed persistently and is not publicly exposed without authentication.
 - [ ] **10.1**: Public homepage and API health are monitored.
@@ -383,7 +423,7 @@ Verified: Schema, User records (1), Post records (3), Checksums.
 - [x] **10.4**: Backup integrity is checked.
 - [x] **10.5**: A backup is restored into an isolated target.
 - [x] **10.5**: Restored data is validated.
-- [ ] **10.6**: Application rollback is documented and tested.
+- [x] **10.6**: Application rollback is documented and tested.
 - [ ] **10.7**: Required incident simulations are completed.
 - [ ] **10.7**: `MILESTONE-10.md` contains reproducible evidence.
 - [x] Milestone 9 public HTTPS routing and application behavior remain healthy.
