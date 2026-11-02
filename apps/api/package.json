@@ -11,7 +11,15 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "node prisma/seed.js",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest tests/unit",
+    "test:component": "NODE_OPTIONS=--experimental-vm-modules jest tests/component",
+    "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest tests/integration",
+    "test:api": "NODE_OPTIONS=--experimental-vm-modules jest tests/api",
+    "test:e2e": "NODE_OPTIONS=--experimental-vm-modules jest tests/e2e"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -26,6 +34,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "prisma": "^6.5.0"
+    "jest": "^30.5.2",
+    "prisma": "^6.5.0",
+    "supertest": "^7.3.1"
   }
 }

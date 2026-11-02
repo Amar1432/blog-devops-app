@@ -93,9 +93,24 @@ npm start          # start API (no watcher)
 - Slugs are lowercase alphanumeric segments separated by single hyphens. Generated slugs are automatically de-duplicated (`my-post`, `my-post-2`, ...); an explicitly supplied duplicate slug returns `409 Conflict`.
 - Publishing an unpublished post sets `publishedAt` the first time. Unpublishing keeps the original timestamp.
 
+## Automated tests
+
+The backend has a Jest + Supertest suite using a dedicated test database. See [TESTING.md](TESTING.md) for the full guide.
+
+```bash
+createdb devops_blog_test
+cp apps/api/.env.test.example apps/api/.env.test
+# edit DATABASE_URL in apps/api/.env.test
+npm test
+```
+
+Available scopes: `test:unit`, `test:component`, `test:integration`, `test:api`, `test:e2e`, `test:coverage`, `test:watch`.
+
+The suite applies pending migrations to the test database automatically and refuses to run against a database whose name does not end in `_test`. It is isolated from the development database and safe to run repeatedly.
+
 ## Verification checklist
 
-With PostgreSQL running, migrations applied and the seed executed:
+For a manual smoke test, with PostgreSQL running, migrations applied and the seed executed:
 
 ```bash
 # Health (200, database up)

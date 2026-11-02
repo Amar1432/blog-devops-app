@@ -1,11 +1,13 @@
 node_modules/
 dist/
 build/
+coverage/
 
 # Environment files (never commit real credentials)
 .env
 .env.*
 !.env.example
+!.env.test.example
 
 # Logs
 *.log
