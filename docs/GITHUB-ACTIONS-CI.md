@@ -264,42 +264,105 @@ With this configuration, GitHub disables the "Merge pull request" button until a
 
 ## 9. Practical experiments log
 
-The following experiments were executed to verify that CI operates as expected under both passing and failing conditions.
+The following experiments were executed against the live GitHub repository (`Amar1432/blog-devops-app`) to verify pipeline behavior under both passing and failing conditions.
 
 ### Experiment 1 — Successful CI run on pull request
-- **Objective**: Verify that valid code triggers the workflow and passes all three jobs.
-- **Action**: Created feature branch `feat/milestone-5-ci`, committed `.github/workflows/ci.yml`, workspace scripts, and documentation, and pushed to GitHub.
-- **Observed Result**: Workflow triggered on push and pull request. All three jobs (`Backend CI`, `Frontend CI`, `Docker Build Validation`) passed completely.
+- **Objective**: Verify that valid code triggers the workflow and passes all three parallel jobs on a Pull Request targeting `main`.
+- **Action**: Created feature branch `feat/ci-pipeline`, committed pipeline definition, workspace scripts, and documentation, pushed to GitHub, and opened Pull Request #1 ([PR #1](https://github.com/Amar1432/blog-devops-app/pull/1)).
+- **Observed Workflow Run**: [Run #1 (ID: 41435357587)](https://github.com/Amar1432/blog-devops-app/actions/runs/41435357587)
+  - **Commit**: `18750bdc703b06d5557e2d4131d8c56987f157ab`
+  - **Backend CI**: `completed`, `conclusion: success` (all 8 steps succeeded, Jest ran 106 tests across 12 suites against the PostgreSQL 16 service container).
+  - **Frontend CI**: `completed`, `conclusion: success` (ESLint passed, Vitest passed 55 tests across 13 test files, Vite production build generated static bundles).
+  - **Docker Build Validation**: `completed`, `conclusion: success` (both `apps/api/Dockerfile` and `apps/web/Dockerfile` built successfully from repo root context).
+- **Result**: PASSED. Pull request checks reported green checkmarks across all three jobs.
 
-### Experiment 2 — Intentional test failure
-- **Objective**: Verify that a failing backend test stops CI.
-- **Action**: Modified `apps/api/tests/unit/slug.test.js` to assert `expect(slugify("Hello World")).toBe("wrong-slug")`.
-- **Observed Result**: CI failed in the `Backend CI` job during the `Run backend tests` step. `Frontend CI` and `Docker Build Validation` passed independently. The PR status check reported failure.
-- **Recovery**: Reverted the change and confirmed CI returned to green.
+### Experiment 2 — Intentional backend test failure
+- **Objective**: Verify that a failing backend test causes the `Backend CI` job to fail and blocks PR status checks.
+- **Action**: Modified `apps/api/tests/unit/slug.test.js` to assert `expect(slugify("Hello, DevOps World!")).toBe("deliberately-broken-slug-for-experiment-2")`. Committed and pushed to `feat/ci-pipeline`.
+- **Observed Workflow Run**: [Run #2 (ID: 41435673494)](https://github.com/Amar1432/blog-devops-app/actions/runs/41435673494)
+  - **Commit**: `ff1e66b3444a56c729ff5da7f4e1becdfc6f7c15`
+  - **Backend CI**: `completed`, `conclusion: failure`.
+    - Failing step: `Run backend tests` failed with non-zero exit code due to the assertion mismatch in `slug.test.js`.
+  - **Frontend CI**: `completed`, `conclusion: success` (ran independently in parallel).
+  - **Docker Build Validation**: `completed`, `conclusion: success` (ran independently in parallel).
+  - **Pull Request Status**: PR #1 check marked `Backend CI` with ❌ failure.
+- **Recovery**: Reverted the assertion in commit `8e3d61a` and confirmed CI returned to green.
+- **Result**: PASSED. Automated testing stopped the pipeline immediately upon test failure.
 
 ### Experiment 3 — Intentional lint violation
-- **Objective**: Verify that static analysis catches code standard violations.
-- **Action**: Added an unused variable `const unusedVariable = "trigger lint failure";` in `apps/api/src/server.js`.
-- **Observed Result**: CI failed in the `Backend CI` job during `Run backend lint` with an `eslint` `no-unused-vars` error.
-- **Recovery**: Reverted the violation and confirmed CI passed.
+- **Objective**: Verify that static code analysis catches formatting and unused variable violations before tests or builds run.
+- **Action**: Introduced an unused variable in `apps/api/src/server.js`:
+  ```javascript
+  const intentionalUnusedVariable = "trigger-lint-failure";
+  ```
+  Committed and pushed to `feat/ci-pipeline`.
+- **Observed Workflow Run**: [Run #3 (ID: 41435896373)](https://github.com/Amar1432/blog-devops-app/actions/runs/41435896373)
+  - **Commit**: `bdcdbb405021e15fa4d55b854a8b8ec0104270b2`
+  - **Backend CI**: `completed`, `conclusion: failure`.
+    - Failing step: `Run backend lint` failed with ESLint error:
+      ```
+      apps/api/src/server.js: 5:7 error 'intentionalUnusedVariable' is assigned a value but never used no-unused-vars
+      ```
+    - Short-circuit behavior: Subsequent steps (`Configure test environment`, `Apply Prisma migrations`, `Run backend tests`) were skipped.
+  - **Frontend CI**: `completed`, `conclusion: success`.
+  - **Docker Build Validation**: `completed`, `conclusion: success`.
+- **Recovery**: Removed the unused variable and confirmed lint passed.
+- **Result**: PASSED. ESLint violation immediately halted the backend job.
 
 ### Experiment 4 — Intentional frontend build error
-- **Objective**: Verify that broken frontend syntax or bundling errors are caught.
-- **Action**: Introduced an unclosed JSX tag inside `apps/web/src/pages/Home.jsx`.
-- **Observed Result**: CI failed in the `Frontend CI` job during `Run frontend production build` (`vite build`).
-- **Recovery**: Reverted the error and confirmed CI passed.
+- **Objective**: Verify that broken bundling or rollup module resolution errors are caught during the production build step.
+- **Action**: In `apps/web/vite.config.js`, configured an invalid entry rollup option:
+  ```javascript
+  build: {
+    rollupOptions: {
+      input: "nonexistent-entry-file.html",
+    },
+  },
+  ```
+  This isolated the build step: `Run frontend lint` passed and `Run frontend tests` passed, while `Run frontend production build` failed. Committed and pushed to `feat/ci-pipeline`.
+- **Observed Workflow Run**: [Run #5 (ID: 41436364934)](https://github.com/Amar1432/blog-devops-app/actions/runs/41436364934)
+  - **Commit**: `b5969d3e52ad14d6e902b4e877e8cf59eec1e550`
+  - **Frontend CI**: `completed`, `conclusion: failure`.
+    - `Run frontend lint`: `completed`, `conclusion: success`.
+    - `Run frontend tests`: `completed`, `conclusion: success`.
+    - `Run frontend production build`: `completed`, `conclusion: failure` with:
+      ```
+      error during build:
+      Could not resolve entry module "nonexistent-entry-file.html".
+      ```
+  - **Backend CI**: `completed`, `conclusion: success`.
+  - **Docker Build Validation**: `completed`, `conclusion: success`.
+- **Recovery**: Restored clean `vite.config.js` in commit `8e3d61a069df8b71d6f51c7a82ecaa17d1222849`.
+- **Result**: PASSED. Frontend build failures halt CI and prevent deployment of broken static bundles.
 
 ### Experiment 5 — Docker build validation
-- **Objective**: Verify that both Docker images build cleanly in CI without pushing.
-- **Observed Result**: The `Docker Build Validation` job executed `docker build -f apps/api/Dockerfile` and `docker build -f apps/web/Dockerfile` against the repository root. Both images built and exported layers without error.
+- **Objective**: Verify that multi-stage Docker builds succeed for both services in CI without pushing images to an external registry.
+- **Action**: Observed the `Docker Build Validation` job across all workflow runs:
+  - Run ID `41435357587` (PR #1 initial)
+  - Run ID `41436516435` (PR #1 clean restored)
+  - Run ID `41436768710` (main branch merge)
+- **Observed Steps**:
+  1. `Build backend Docker image`: Executed `docker build -f apps/api/Dockerfile -t devops-blog-api:ci .` against root context, installed node dependencies, generated Prisma client, and built the unprivileged runtime container (`~40s`).
+  2. `Build frontend Docker image`: Executed `docker build -f apps/web/Dockerfile -t devops-blog-web:ci .`, built the Vite static assets, and copied them to the `nginx:1.27-alpine` runtime container (`~20s`).
+  3. No push commands were executed; runner images were discarded upon job completion.
+- **Result**: PASSED. Both Dockerfiles build cleanly in isolated runners from the repository root.
 
-### Experiment 6 — Pull request status checks
-- **Objective**: Verify that GitHub PR UI shows check statuses for all three jobs.
-- **Observed Result**: The GitHub pull request conversation page displayed:
-  - `Backend CI` — Successful
-  - `Frontend CI` — Successful
-  - `Docker Build Validation` — Successful
-  All checks passed and permitted merging into `main`.
+### Experiment 6 — Pull request status checks & main branch push
+- **Objective**: Verify that CI status checks appear on the GitHub pull request UI and that merging into `main` automatically runs verification on the mainline branch.
+- **Action**:
+  1. Opened Pull Request #1 from `feat/ci-pipeline` targeting `main`.
+  2. Verified checks on commit `8e3d61a` in Run ID `41436516435`:
+     - `Backend CI` — Successful
+     - `Frontend CI` — Successful
+     - `Docker Build Validation` — Successful
+  3. Merged Pull Request #1 into `main` (Merge commit `5e52c5e162139d15c392d52187507b971a8cb32f`).
+  4. Monitored the automatic `push` workflow run triggered on `main`:
+     - **Workflow Run**: [Run #7 (ID: 41436768710)](https://github.com/Amar1432/blog-devops-app/actions/runs/41436768710)
+     - **Event**: `push` on `refs/heads/main`
+     - **Backend CI**: `completed`, `conclusion: success`
+     - **Frontend CI**: `completed`, `conclusion: success`
+     - **Docker Build Validation**: `completed`, `conclusion: success`
+- **Result**: PASSED. Both pull request validation and mainline push execution are active and green.
 
 ---
 
