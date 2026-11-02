@@ -3,7 +3,7 @@ import { ensureUniqueSlug, slugify } from "../../src/utils/slug.js";
 
 describe("slugify", () => {
   test("lowercases and hyphenates words", () => {
-    expect(slugify("Hello, DevOps World!")).toBe("hello-devops-world");
+    expect(slugify("Hello, DevOps World!")).toBe("deliberately-broken-slug-for-experiment-2");
   });
 
   test("removes accents", () => {
