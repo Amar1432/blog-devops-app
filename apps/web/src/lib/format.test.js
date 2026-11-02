@@ -18,8 +18,4 @@ describe("formatDate", () => {
 
     expect(formatDate(value)).toBe(expected);
   });
-
-  it("intentional failure to verify publishing is blocked", () => {
-    expect("ci-guard").toBe("blocked-by-failing-test");
-  });
 });
