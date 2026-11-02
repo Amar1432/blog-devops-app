@@ -1,6 +1,6 @@
 # DevOps Blog
 
-A small full-stack blogging application built as the foundation for a hands-on DevOps learning journey. Milestones 0–2 deliver a tested blog with a public reading experience and a JWT-protected admin area; Milestone 3 packages the frontend, backend and database as Docker containers; Milestone 4 orchestrates the multi-container stack with Docker Compose; Milestone 5 automates quality checks and Docker image builds with a GitHub Actions CI pipeline.
+A small full-stack blogging application built as the foundation for a hands-on DevOps learning journey. Milestones 0–2 deliver a tested blog with a public reading experience and a JWT-protected admin area; Milestone 3 packages the frontend, backend and database as Docker containers; Milestone 4 orchestrates the multi-container stack with Docker Compose; Milestone 5 automates quality checks and Docker image builds with a GitHub Actions CI pipeline; Milestone 6 publishes version-traceable Docker images to GitHub Container Registry (GHCR).
 
 ## Stack
 
@@ -268,6 +268,36 @@ A multi-job GitHub Actions pipeline runs on every pull request targeting `main` 
 
 The complete guide — CI concepts, workflow architecture, runner details, dependency caching, service containers, log inspection, branch protection, and 6 practical failure experiments — is in [docs/GITHUB-ACTIONS-CI.md](docs/GITHUB-ACTIONS-CI.md).
 
+## Container Registry & Publishing (Milestone 6)
+
+The CI/CD pipeline extends to automatically build and publish versioned Docker images to **GitHub Container Registry (GHCR)** using Docker Buildx and GitHub Actions caching.
+
+### Published Image Repositories
+
+- **Backend API**: `ghcr.io/amar1432/devops-blog-api`
+- **Frontend Web**: `ghcr.io/amar1432/devops-blog-web`
+
+### Tagging Policy
+
+- `sha-<short-sha>`: Immutable, commit-traceable tag (e.g. `sha-a1b2c3d`) generated for every successful build on `main`.
+- `latest`: Floating tag pointing to the most recent successful build on `main`.
+
+### Pulling the Images
+
+```bash
+# Pull by latest tag
+docker pull ghcr.io/amar1432/devops-blog-api:latest
+docker pull ghcr.io/amar1432/devops-blog-web:latest
+
+# Pull by commit SHA tag
+docker pull ghcr.io/amar1432/devops-blog-api:sha-<short-sha>
+docker pull ghcr.io/amar1432/devops-blog-web:sha-<short-sha>
+```
+
+> If packages are set to private, authenticate first via `echo $CR_PAT | docker login ghcr.io -u <username> --password-stdin`.
+
+The complete guide — container registry fundamentals, Buildx, BuildKit caching, permission scoping, private/public package management, and 7 verification experiments — is in [docs/GHCR-IMAGE-PUBLISHING.md](docs/GHCR-IMAGE-PUBLISHING.md).
+
 ## Root scripts
 
 | Script               | Description                                      |
@@ -302,11 +332,12 @@ The complete guide — CI concepts, workflow architecture, runner details, depen
 - [Docker guide](docs/DOCKER.md) — container concepts, builds, networking, volumes and experiments (Milestone 3).
 - [Docker Compose guide](docs/DOCKER-COMPOSE.md) — multi-container orchestration, health checks, restart policies, and experiments (Milestone 4).
 - [GitHub Actions CI guide](docs/GITHUB-ACTIONS-CI.md) — workflow design, service containers, caching, and CI failure experiments (Milestone 5).
+- [GHCR publishing guide](docs/GHCR-IMAGE-PUBLISHING.md) — container registries, Buildx, BuildKit caching, tagging strategy, and package security (Milestone 6).
 - [API reference](docs/API.md) — endpoints, payloads, error format.
 
 ## Scope
 
-Milestones 0–5 cover the application, automated tests, standalone Docker containerization, Docker Compose orchestration, and GitHub Actions CI. GHCR image publishing, Coolify, Kubernetes, cloud infrastructure, Redis, microservices, image uploads, comments, likes, public registration, and production reverse proxies are intentionally excluded and belong to later milestones.
+Milestones 0–6 cover the application, automated tests, standalone Docker containerization, Docker Compose orchestration, GitHub Actions CI, and GHCR image publishing. VPS deployment, Coolify, Kubernetes, cloud infrastructure, Redis, microservices, image uploads, comments, likes, public registration, and production reverse proxies are intentionally excluded and belong to later milestones.
 
 ## Known limitations
 
