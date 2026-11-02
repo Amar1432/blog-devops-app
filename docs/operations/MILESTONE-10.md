@@ -85,7 +85,8 @@ Host Administration & Operational Tooling:
 | **10.2** | Container and Application Logging | Implemented & Verified | [`docs/operations/LOGGING.md`](./LOGGING.md) |
 | **10.3** | Host and Container Resource Monitoring | Implemented & Verified | [`docs/operations/RESOURCE-MONITORING.md`](./RESOURCE-MONITORING.md) |
 | **10.4** | Automated PostgreSQL Backups | Implemented & Verified | [`docs/operations/BACKUP-AND-RESTORE.md`](./BACKUP-AND-RESTORE.md) |
-| **10.5** | Isolated Restore and Disaster Recovery | Pending | `docs/operations/BACKUP-AND-RESTORE.md` |
+| **10.5** | Isolated Restore and Disaster Recovery | Implemented & Verified | [`docs/operations/BACKUP-AND-RESTORE.md`](./BACKUP-AND-RESTORE.md) |
+| **10.6** | Application Rollback & Configuration Recovery | Pending | `docs/operations/ROLLBACK.md` |
 | **10.6** | Application Rollback & Configuration Recovery | Pending | `docs/operations/ROLLBACK.md` |
 | **10.7** | Incident Simulations & Milestone Closure | Pending | `docs/operations/INCIDENT-REPORTS/` |
 
@@ -297,7 +298,78 @@ Verification PASSED: backups/devops_blog_backup_20261102_193259Z.dump is a valid
 
 ---
 
-## 9. Definition of Done Checklist
+## 9. Phase 10.5 — Isolated Disaster Recovery Drill Evidence
+
+### Live Execution Output (`scripts/restore-postgres-backup.sh`)
+```text
+=================================================================
+   PostgreSQL Isolated Restore & DR Drill — 2026-11-02 19:40:39 UTC
+=================================================================
+Backup File:       backups/devops_blog_backup_20261102_193259Z.dump
+Mode:              Isolated Drill Container
+Ephemeral Target:  devops-blog-restore-drill-78249
+Safety Rule:       Live production database will NOT be touched.
+
+[1/5] Verifying backup integrity before restore...
+1. Validating SHA-256 checksum... [OK]
+2. Checking PostgreSQL custom format magic bytes... [OK] (PGDMP format confirmed)
+3. Inspecting Table of Contents (TOC) via pg_restore...
+Verification PASSED: backups/devops_blog_backup_20261102_193259Z.dump is a valid custom-format backup.
+
+[2/5] Provisioning isolated ephemeral PostgreSQL 16 container...
+Waiting for isolated PostgreSQL container to complete full initialization...
+[OK] Ephemeral target container is fully initialized and target database devops_blog_restore is available.
+
+[3/5] Restoring backup stream via pg_restore into isolated target...
+[OK] pg_restore completed in 1s.
+
+[4/5] Validating recovered data in isolated database...
+
+--- Recovered Tables ---
+                    List of relations
+ Schema |        Name        | Type  |       Owner       
+--------+--------------------+-------+-------------------
+ public | Post               | table | restore_test_user
+ public | User               | table | restore_test_user
+ public | _prisma_migrations | table | restore_test_user
+(3 rows)
+
+--- Row Count Verification ---
+        tbl         | count 
+--------------------+-------
+ User               |     1
+ Post               |     3
+ _prisma_migrations |     1
+(3 rows)
+
+--- Representative Record Check ---
+User table:
+            id             |         email          |     name     
+---------------------------+------------------------+--------------
+ cmvzew6kh0000lf013shdsg1y | admin@devopsblog.local | DevOps Admin
+
+Post table:
+            id             |                     title                     |                  slug                   | published 
+---------------------------+-----------------------------------------------+-----------------------------------------+-----------
+ cmvzeyn920001pg01xfry0blf | First Production Post                         | first-production-post                   | t
+ cmvzf7m850003pg0184ajv328 | Rise of the AI 🤖                             | rise-of-the-ai                          | t
+ cmvzjva3i0001pa01epd7egav | Milestone 9: HTTPS & Reverse Proxy Secured 🚀 | milestone-9-https-reverse-proxy-secured | t
+
+[5/5] Confirming live production database was NOT modified...
+Live production Post count: 3 | Restored Post count: 3
+
+=================================================================
+Disaster Recovery drill SUCCESSFUL in 16s.
+Verified: Schema, User records (1), Post records (3), Checksums.
+=================================================================
+
+[CLEANUP] Stopping and removing isolated drill container: devops-blog-restore-drill-78249...
+[CLEANUP] Isolated environment safely dismantled.
+```
+
+---
+
+## 10. Definition of Done Checklist
 
 - [ ] **10.1**: Uptime Kuma is deployed persistently and is not publicly exposed without authentication.
 - [ ] **10.1**: Public homepage and API health are monitored.
@@ -309,8 +381,8 @@ Verification PASSED: backups/devops_blog_backup_20261102_193259Z.dump is a valid
 - [x] **10.4**: PostgreSQL backups run automatically.
 - [x] **10.4**: Backup retention is implemented and tested safely.
 - [x] **10.4**: Backup integrity is checked.
-- [ ] **10.5**: A backup is restored into an isolated target.
-- [ ] **10.5**: Restored data is validated.
+- [x] **10.5**: A backup is restored into an isolated target.
+- [x] **10.5**: Restored data is validated.
 - [ ] **10.6**: Application rollback is documented and tested.
 - [ ] **10.7**: Required incident simulations are completed.
 - [ ] **10.7**: `MILESTONE-10.md` contains reproducible evidence.
