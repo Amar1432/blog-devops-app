@@ -2,8 +2,6 @@ import { app } from "./app.js";
 import { env } from "./config/env.js";
 import { prisma } from "./lib/prisma.js";
 
-const intentionalUnusedVariable = "trigger-lint-failure";
-
 async function start() {
   try {
     await prisma.$connect();
