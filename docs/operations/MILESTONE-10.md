@@ -83,7 +83,7 @@ Host Administration & Operational Tooling:
 |---|---|---|---|
 | **10.1** | Availability Monitoring with Uptime Kuma | Implemented & Deployed | [`docs/operations/MONITORING.md`](./MONITORING.md) |
 | **10.2** | Container and Application Logging | Implemented & Verified | [`docs/operations/LOGGING.md`](./LOGGING.md) |
-| **10.3** | Host and Container Resource Monitoring | Pending | `docs/operations/RESOURCE-MONITORING.md` |
+| **10.3** | Host and Container Resource Monitoring | Implemented & Verified | [`docs/operations/RESOURCE-MONITORING.md`](./RESOURCE-MONITORING.md) |
 | **10.4** | Automated PostgreSQL Backups | Pending | `docs/operations/BACKUP-AND-RESTORE.md` |
 | **10.5** | Isolated Restore and Disaster Recovery | Pending | `docs/operations/BACKUP-AND-RESTORE.md` |
 | **10.6** | Application Rollback & Configuration Recovery | Pending | `docs/operations/ROLLBACK.md` |
@@ -187,7 +187,50 @@ proxy-1 | 152.59.147.230 - - [02/Nov/2026:19:23:57 +0000] "GET /api/health HTTP/
 
 ---
 
-## 7. Definition of Done Checklist
+## 7. Phase 10.3 — Host and Container Resource Baseline Evidence
+
+Captured directly from `/opt/devops-blog/scripts/inspect-resources.sh` on the production server:
+
+```text
+=================================================================
+   Production Resource Inspection — 2026-11-02 19:28:18 UTC
+=================================================================
+
+[1] Host Uptime & CPU Load
+ 19:28:18 up  1:37,  1 user,  load average: 0.52, 0.99, 0.85
+CPU Cores detected: 2 | 1-min Load: 0.52
+
+[2] Memory & Swap Allocation
+               total        used        free      shared  buff/cache   available
+Mem:           951Mi       540Mi        80Mi        10Mi       525Mi       410Mi
+Swap:          2.0Gi       166Mi       1.8Gi
+
+[3] Host Filesystem Disk Space
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda1        45G  6.4G   38G  15% /
+
+[4] Docker Storage Summary
+TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          6         6         2.38GB    0B (0%)
+Containers      6         5         5.231MB   4.588MB (87%)
+Local Volumes   6         5         48.79MB   0B (0%)
+
+[5] Container Resource Consumption (Real-time snapshot)
+NAME                             CPU %     MEM USAGE / LIMIT     MEM %     NET I/O           BLOCK I/O
+devops-blog-prod-proxy-1         0.00%     4.855MiB / 951.2MiB   0.51%     27.8kB / 67.1kB   2.56MB / 397kB
+devops-blog-prod-web-1           0.00%     2.746MiB / 951.2MiB   0.29%     5.28kB / 6.25kB   9.24MB / 2.4MB
+devops-blog-prod-api-1           1.06%     94.8MiB / 951.2MiB    9.97%     14.5kB / 14.6kB   176MB / 28.2MB
+devops-blog-prod-db-1            18.07%    15.5MiB / 951.2MiB    1.63%     12.5kB / 8.83kB   62.2MB / 12.3MB
+devops-blog-prod-uptime-kuma-1   0.44%     85.91MiB / 951.2MiB   9.03%     59.3kB / 16kB     191MB / 48.8MB
+
+[6] Operational Health Evaluation
+Disk Usage: [HEALTHY] Root filesystem is at 15% capacity.
+RAM Usage:  [HEALTHY] 43% memory available.
+```
+
+---
+
+## 8. Definition of Done Checklist
 
 - [ ] **10.1**: Uptime Kuma is deployed persistently and is not publicly exposed without authentication.
 - [ ] **10.1**: Public homepage and API health are monitored.
@@ -195,7 +238,7 @@ proxy-1 | 152.59.147.230 - - [02/Nov/2026:19:23:57 +0000] "GET /api/health HTTP/
 - [ ] **10.1**: A notification is received successfully.
 - [x] **10.2**: Container and Nginx log investigation procedures are documented.
 - [x] **10.2**: Docker log rotation is configured and verified.
-- [ ] **10.3**: Host and container resource inspection is documented.
+- [x] **10.3**: Host and container resource inspection is documented.
 - [ ] **10.4**: PostgreSQL backups run automatically.
 - [ ] **10.4**: Backup retention is implemented and tested safely.
 - [ ] **10.4**: Backup integrity is checked.
