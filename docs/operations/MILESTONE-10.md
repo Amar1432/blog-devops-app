@@ -81,8 +81,8 @@ Host Administration & Operational Tooling:
 
 | Phase | Description | Status | Reference Doc |
 |---|---|---|---|
-| **10.1** | Availability Monitoring with Uptime Kuma | Ready for Review / Deployment | [`docs/operations/MONITORING.md`](./MONITORING.md) |
-| **10.2** | Container and Application Logging | Pending | `docs/operations/LOGGING.md` |
+| **10.1** | Availability Monitoring with Uptime Kuma | Implemented & Deployed | [`docs/operations/MONITORING.md`](./MONITORING.md) |
+| **10.2** | Container and Application Logging | Implemented & Verified | [`docs/operations/LOGGING.md`](./LOGGING.md) |
 | **10.3** | Host and Container Resource Monitoring | Pending | `docs/operations/RESOURCE-MONITORING.md` |
 | **10.4** | Automated PostgreSQL Backups | Pending | `docs/operations/BACKUP-AND-RESTORE.md` |
 | **10.5** | Isolated Restore and Disaster Recovery | Pending | `docs/operations/BACKUP-AND-RESTORE.md` |
@@ -155,14 +155,46 @@ Connection: keep-alive
 
 ---
 
-## 6. Definition of Done Checklist
+## 6. Phase 10.2 — Logging & Log Rotation Verification Evidence
+
+### 1. Enforced Container Log Options (`docker inspect`)
+Verified on the live production server after container recreation:
+```text
+/devops-blog-prod-api-1: Driver=json-file, Options={"max-file":"3","max-size":"10m"}
+/devops-blog-prod-db-1: Driver=json-file, Options={"max-file":"3","max-size":"10m"}
+/devops-blog-prod-proxy-1: Driver=json-file, Options={"max-file":"5","max-size":"10m"}
+/devops-blog-prod-uptime-kuma-1: Driver=json-file, Options={"max-file":"3","max-size":"10m"}
+/devops-blog-prod-web-1: Driver=json-file, Options={"max-file":"3","max-size":"10m"}
+```
+*Confirmation:* All containers enforce strict log rotation. Total log footprint across the stack is bounded to a maximum of 180 MB, preventing filesystem exhaustion.
+
+### 2. Standardized Log Command Inspection
+```text
+=== TIMESTAMPS TEST ===
+api-1  | 2026-11-02T19:22:53.810674806Z Connected to the database
+api-1  | 2026-11-02T19:22:53.810730921Z API listening on http://localhost:5000
+
+=== SINCE TEST ===
+proxy-1  | 127.0.0.1 - - [02/Nov/2026:19:23:32 +0000] "GET / HTTP/1.1" 301 162 "-" "Wget" "-"
+```
+
+### 3. Ingress Request Tracing
+Generated test request: `curl -A "SRE-Log-Verification-10.2" https://luffydev.duckdns.org/api/health`
+Captured in Nginx proxy log:
+```text
+proxy-1 | 152.59.147.230 - - [02/Nov/2026:19:23:57 +0000] "GET /api/health HTTP/2.0" 200 82 "-" "SRE-Log-Verification-10.2" "-"
+```
+
+---
+
+## 7. Definition of Done Checklist
 
 - [ ] **10.1**: Uptime Kuma is deployed persistently and is not publicly exposed without authentication.
 - [ ] **10.1**: Public homepage and API health are monitored.
 - [ ] **10.1**: DOWN and UP transitions are verified.
 - [ ] **10.1**: A notification is received successfully.
-- [ ] **10.2**: Container and Nginx log investigation procedures are documented.
-- [ ] **10.2**: Docker log rotation is configured and verified.
+- [x] **10.2**: Container and Nginx log investigation procedures are documented.
+- [x] **10.2**: Docker log rotation is configured and verified.
 - [ ] **10.3**: Host and container resource inspection is documented.
 - [ ] **10.4**: PostgreSQL backups run automatically.
 - [ ] **10.4**: Backup retention is implemented and tested safely.

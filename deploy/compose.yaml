@@ -3,6 +3,16 @@
 
 name: devops-blog-prod
 
+# -----------------------------------------------------------------------------
+# Reusable Bounded Logging Definition
+# Prevents unbounded Docker container log growth on the host disk.
+# -----------------------------------------------------------------------------
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # ---------------------------------------------------------------------------
   # PostgreSQL 16
@@ -10,6 +20,7 @@ services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set in .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
@@ -33,6 +44,7 @@ services:
   api:
     image: ghcr.io/amar1432/devops-blog-api:latest
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       db:
         condition: service_healthy
@@ -68,6 +80,7 @@ services:
   web:
     image: ghcr.io/amar1432/devops-blog-web:latest
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       api:
         condition: service_healthy
@@ -97,6 +110,11 @@ services:
   proxy:
     image: nginx:1.27-alpine
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
     depends_on:
       web:
         condition: service_healthy
@@ -125,6 +143,11 @@ services:
   certbot:
     image: certbot/certbot:latest
     restart: "no"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
     volumes:
       - certbot-etc:/etc/letsencrypt
       - certbot-www:/var/www/certbot
@@ -137,6 +160,7 @@ services:
   uptime-kuma:
     image: louislam/uptime-kuma:1.23.16
     restart: unless-stopped
+    logging: *default-logging
     ports:
       # Security: Bind strictly to loopback (127.0.0.1).
       # Never expose port 3001 to 0.0.0.0 or through the public reverse proxy.
