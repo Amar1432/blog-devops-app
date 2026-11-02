@@ -1,6 +1,6 @@
 # DevOps Blog
 
-A small full-stack blogging application built as the foundation for a hands-on DevOps learning journey. Milestones 0–2 deliver a tested blog with a public reading experience and a JWT-protected admin area; Milestone 3 packages the frontend, backend and database as Docker containers; Milestone 4 orchestrates the multi-container stack with Docker Compose.
+A small full-stack blogging application built as the foundation for a hands-on DevOps learning journey. Milestones 0–2 deliver a tested blog with a public reading experience and a JWT-protected admin area; Milestone 3 packages the frontend, backend and database as Docker containers; Milestone 4 orchestrates the multi-container stack with Docker Compose; Milestone 5 automates quality checks and Docker image builds with a GitHub Actions CI pipeline.
 
 ## Stack
 
@@ -258,12 +258,24 @@ docker compose --env-file .env.compose down
 docker compose --env-file .env.compose down -v
 ```
 
+## Continuous Integration (Milestone 5)
+
+A multi-job GitHub Actions pipeline runs on every pull request targeting `main` and on pushes to `main`. It automatically verifies:
+
+- **Backend CI**: Node.js 22, npm dependency caching, Prisma client generation, ESLint for `apps/api`, database migrations, and Jest test suites running against an isolated PostgreSQL 16 service container.
+- **Frontend CI**: Node.js 22, npm dependency caching, ESLint for `apps/web`, Vitest component tests, and production Vite bundle build with non-sensitive environment variables.
+- **Docker Build Validation**: Builds both backend and frontend Docker images from repository root context to verify Dockerfile validity without publishing images.
+
+The complete guide — CI concepts, workflow architecture, runner details, dependency caching, service containers, log inspection, branch protection, and 6 practical failure experiments — is in [docs/GITHUB-ACTIONS-CI.md](docs/GITHUB-ACTIONS-CI.md).
+
 ## Root scripts
 
 | Script               | Description                                      |
 | -------------------- | ------------------------------------------------ |
 | `npm run lint`       | Lint the frontend and backend with ESLint        |
 | `npm run lint:fix`   | Lint and automatically fix safe issues           |
+| `npm run lint:api`   | Lint only the backend API                        |
+| `npm run lint:web`   | Lint only the frontend web application           |
 | `npm run dev`        | Run API and web dev servers together             |
 | `npm run dev:api`    | Run only the API (Node `--watch`)                |
 | `npm run dev:web`    | Run only the Vite dev server                     |
@@ -289,11 +301,12 @@ docker compose --env-file .env.compose down -v
 - [Testing guide](docs/TESTING.md) — test layers, database setup, coverage.
 - [Docker guide](docs/DOCKER.md) — container concepts, builds, networking, volumes and experiments (Milestone 3).
 - [Docker Compose guide](docs/DOCKER-COMPOSE.md) — multi-container orchestration, health checks, restart policies, and experiments (Milestone 4).
+- [GitHub Actions CI guide](docs/GITHUB-ACTIONS-CI.md) — workflow design, service containers, caching, and CI failure experiments (Milestone 5).
 - [API reference](docs/API.md) — endpoints, payloads, error format.
 
 ## Scope
 
-Milestones 0–4 cover the application, automated tests, standalone Docker containerization, and Docker Compose orchestration. CI/CD, GitHub Actions, GHCR, Coolify, Kubernetes, cloud infrastructure, Redis, microservices, image uploads, comments, likes, public registration, and production reverse proxies are intentionally excluded and belong to later milestones.
+Milestones 0–5 cover the application, automated tests, standalone Docker containerization, Docker Compose orchestration, and GitHub Actions CI. GHCR image publishing, Coolify, Kubernetes, cloud infrastructure, Redis, microservices, image uploads, comments, likes, public registration, and production reverse proxies are intentionally excluded and belong to later milestones.
 
 ## Known limitations
 
