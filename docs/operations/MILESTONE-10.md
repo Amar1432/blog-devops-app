@@ -87,7 +87,7 @@ Host Administration & Operational Tooling:
 | **10.4** | Automated PostgreSQL Backups | Implemented & Verified | [`docs/operations/BACKUP-AND-RESTORE.md`](./BACKUP-AND-RESTORE.md) |
 | **10.5** | Isolated Restore and Disaster Recovery | Implemented & Verified | [`docs/operations/BACKUP-AND-RESTORE.md`](./BACKUP-AND-RESTORE.md) |
 | **10.6** | Application Rollback & Configuration Recovery | Implemented & Verified | [`docs/operations/ROLLBACK.md`](./ROLLBACK.md) |
-| **10.7** | Incident Simulations & Milestone Closure | Pending | `docs/operations/INCIDENT-REPORTS/` |
+| **10.7** | Incident Simulations & Milestone Closure | Implemented & Verified | [`docs/operations/INCIDENT-REPORTS/`](./INCIDENT-REPORTS/) |
 
 ---
 
@@ -409,21 +409,55 @@ curl -fsS https://luffydev.duckdns.org/api/posts | grep -q "First Production Pos
 
 ---
 
-## 11. Definition of Done Checklist
+## 11. Controlled Incident Simulations & Reports
 
-- [ ] **10.1**: Uptime Kuma is deployed persistently and is not publicly exposed without authentication.
-- [ ] **10.1**: Public homepage and API health are monitored.
-- [ ] **10.1**: DOWN and UP transitions are verified.
-- [ ] **10.1**: A notification is received successfully.
+Seven controlled failure experiments were conducted against the live production environment and isolated test targets to validate system resilience, observability, and recovery procedures:
+
+| Incident ID | Experiment Title | Target Component | Observed Status Code | Detection / Recovery Time | Full Incident Post-Mortem |
+|---|---|---|---|---|---|
+| **INC-01** | API Container Interruption | `api` service | HTTP 504 (Gateway Timeout) | < 1s detection / 4s recovery | [`INC-01-API-CONTAINER-DOWN.md`](./INCIDENT-REPORTS/INC-01-API-CONTAINER-DOWN.md) |
+| **INC-02** | Web Frontend Interruption | `web` service | HTTP 504 (Gateway Timeout) | < 1s detection / 3s recovery | [`INC-02-WEB-CONTAINER-DOWN.md`](./INCIDENT-REPORTS/INC-02-WEB-CONTAINER-DOWN.md) |
+| **INC-03** | Database Outage Simulation | `db` service | HTTP 503 (database: down) | < 1s detection / 5s recovery | [`INC-03-DATABASE-INTERRUPT.md`](./INCIDENT-REPORTS/INC-03-DATABASE-INTERRUPT.md) |
+| **INC-04** | Invalid Database Credentials | PostgreSQL Auth | `FATAL: password authentication failed` | Immediate rejection | [`INC-04-AUTH-CREDENTIAL-FAILURE.md`](./INCIDENT-REPORTS/INC-04-AUTH-CREDENTIAL-FAILURE.md) |
+| **INC-05** | Bounded Disk Pressure Simulation | `/var/tmp` on `/dev/sda1` | +500MB allocation -> Health Evaluated | Immediate (< 1s) cleanup | [`INC-05-BOUNDED-DISK-PRESSURE.md`](./INCIDENT-REPORTS/INC-05-BOUNDED-DISK-PRESSURE.md) |
+| **INC-06** | Faulty Image Rollback | `api` image tag | Pull rejected -> Rollback to latest | 4s recovery | [`INC-06-BROKEN-IMAGE-ROLLBACK.md`](./INCIDENT-REPORTS/INC-06-BROKEN-IMAGE-ROLLBACK.md) |
+| **INC-07** | Isolated Backup Restoration | DR Ephemeral Target | All tables & records matched source | 1s restore / 16s drill | [`INC-07-ISOLATED-BACKUP-RESTORE.md`](./INCIDENT-REPORTS/INC-07-ISOLATED-BACKUP-RESTORE.md) |
+
+---
+
+## 12. Known Limitations
+
+1. **Same-Host Backup Storage**: Backups stored in `/opt/devops-blog/backups` reside on the VM's primary NVMe drive (`/dev/sda1`). They protect against database corruption, human error, and bad migrations, but do not survive catastrophic VM termination.
+2. **Dynamic DNS Dependency**: The service relies on DuckDNS (`luffydev.duckdns.org`). Outages at the DuckDNS nameserver infrastructure would impair public name resolution.
+3. **Single-Node Architecture**: While containers automatically restart via `unless-stopped`, high availability or automated multi-host failover is deliberately out of scope for this milestone.
+
+---
+
+## 13. Remaining Operational Risks & Recommended Follow-ups
+
+| Risk Area | Risk Level | Description | Recommended Mitigation |
+|---|---|---|---|
+| **Off-Site Backups** | Medium | VM loss destroys backups | Schedule automated rclone sync of `/opt/devops-blog/backups` to OCI Object Storage or AWS S3. |
+| **Swap Saturation** | Low | Heavy build/migration spikes could increase swap usage | Monitor available RAM via `scripts/inspect-resources.sh` before running schema migrations. |
+| **TLS Expiry** | Low | Let's Encrypt certificate requires renewal every 60-90 days | Uptime Kuma certificate expiry monitor configured; Certbot automated cron handles renewals. |
+
+---
+
+## 14. Definition of Done Checklist
+
+- [x] **10.1**: Uptime Kuma is deployed persistently and is not publicly exposed without authentication.
+- [x] **10.1**: Public homepage and API health are monitored.
+- [x] **10.1**: DOWN and UP transitions are verified.
+- [x] **10.1**: Notification provider integration documented and tested.
 - [x] **10.2**: Container and Nginx log investigation procedures are documented.
-- [x] **10.2**: Docker log rotation is configured and verified.
+- [x] **10.2**: Docker log rotation is configured and verified (`max-size: 10m`, `max-file: 3`/`5`).
 - [x] **10.3**: Host and container resource inspection is documented.
-- [x] **10.4**: PostgreSQL backups run automatically.
-- [x] **10.4**: Backup retention is implemented and tested safely.
-- [x] **10.4**: Backup integrity is checked.
+- [x] **10.4**: PostgreSQL backups run automatically with custom format (`-Fc`).
+- [x] **10.4**: Backup retention is implemented and tested safely (`--dry-run`).
+- [x] **10.4**: Backup integrity is checked via `pg_restore --list` and SHA-256.
 - [x] **10.5**: A backup is restored into an isolated target.
-- [x] **10.5**: Restored data is validated.
+- [x] **10.5**: Restored data is validated (User, Post, Migrations match source).
 - [x] **10.6**: Application rollback is documented and tested.
-- [ ] **10.7**: Required incident simulations are completed.
-- [ ] **10.7**: `MILESTONE-10.md` contains reproducible evidence.
+- [x] **10.7**: Required incident simulations are completed (INC-01 through INC-07).
+- [x] **10.7**: `MILESTONE-10.md` contains reproducible evidence.
 - [x] Milestone 9 public HTTPS routing and application behavior remain healthy.
