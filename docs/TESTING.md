@@ -162,8 +162,54 @@ All files   96.55% statements   92.95% branches   96.42% functions   96.47% line
 4. Disconnect Prisma in `afterAll` for files that use the database.
 5. Prefer asserting observable behavior (status, payload, persisted state) over implementation details.
 
+## Frontend tests
+
+The web app uses **Vitest** with **React Testing Library** and **jsdom**.
+
+| Tool                         | Purpose                                     |
+| ---------------------------- | ------------------------------------------- |
+| Vitest                       | Runner, assertions, mocks, coverage         |
+| @testing-library/react       | Render and query React components           |
+| @testing-library/user-event  | Realistic typing, clicking and form submits |
+| @testing-library/jest-dom    | DOM matchers such as `toBeInTheDocument`    |
+
+Run from the repository root or from `apps/web`:
+
+| Command                                             | Scope                       |
+| --------------------------------------------------- | --------------------------- |
+| `npm run test:web`                                  | All frontend tests          |
+| `npm run test --workspace=@devops-blog/web`         | All frontend tests          |
+| `npm run test:watch --workspace=@devops-blog/web`   | Re-run tests while editing  |
+| `npm run test:coverage --workspace=@devops-blog/web`| Tests with a coverage report |
+
+Test files live beside the code they cover:
+
+```
+apps/web/src/
+├── test/setup.js                 # jest-dom, cleanup, localStorage reset
+├── lib/
+│   ├── api.test.js               # fetch wrapper, errors, auth headers
+│   ├── auth.test.js              # session persistence helpers
+│   └── format.test.js            # date formatting
+├── components/
+│   ├── Layout.test.jsx           # navigation + logout
+│   ├── ProtectedRoute.test.jsx   # auth redirects
+│   └── StatusMessage.test.jsx    # tone classes
+├── pages/
+│   ├── Home.test.jsx             # loading, posts, empty, error
+│   ├── PostDetail.test.jsx       # loading, content, missing post
+│   ├── Login.test.jsx            # submit, error, existing session
+│   ├── AdminDashboard.test.jsx   # list, delete, 401 handling
+│   ├── PostEditor.test.jsx       # create, edit, validation, 401
+│   └── NotFound.test.jsx
+└── App.test.jsx                  # route-level integration
+```
+
+The API module is mocked with `vi.mock` in page tests; `fetch` is stubbed with
+`vi.stubGlobal` in `api.test.js`. Each test starts with a clean `localStorage`.
+
 ## Not covered yet
 
-- React component and UI browser tests.
+- Browser-level UI tests (Playwright/Cypress).
 - Load, performance and security-specific tests.
 - Deployment, Docker and CI execution (future milestones).

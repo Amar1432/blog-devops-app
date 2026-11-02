@@ -123,6 +123,8 @@ The suite refuses to run against any database whose name does not end in `_test`
 
 | Script               | Description                                      |
 | -------------------- | ------------------------------------------------ |
+| `npm run lint`       | Lint the frontend and backend with ESLint        |
+| `npm run lint:fix`   | Lint and automatically fix safe issues           |
 | `npm run dev`        | Run API and web dev servers together             |
 | `npm run dev:api`    | Run only the API (Node `--watch`)                |
 | `npm run dev:web`    | Run only the Vite dev server                     |
@@ -133,13 +135,14 @@ The suite refuses to run against any database whose name does not end in `_test`
 | `npm run db:seed`    | Create/update the admin user                     |
 | `npm run db:studio`  | Open Prisma Studio                               |
 | `npm run db:generate`| Regenerate the Prisma client                     |
-| `npm test`           | Run the full backend test suite                  |
+| `npm test`           | Run the frontend and backend test suites         |
 | `npm run test:unit`  | Run unit tests                                   |
 | `npm run test:component` | Run middleware/component tests               |
 | `npm run test:integration` | Run controller + database tests            |
 | `npm run test:api`   | Run HTTP API tests                               |
 | `npm run test:e2e`   | Run end-to-end lifecycle tests                   |
-| `npm run test:coverage` | Run all tests with coverage                   |
+| `npm run test:coverage` | Run all backend tests with coverage           |
+| `npm run test:web`   | Run the frontend tests (Vitest + RTL)            |
 
 ## Documentation
 

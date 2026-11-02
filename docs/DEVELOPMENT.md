@@ -77,6 +77,19 @@ npm run build      # build web assets
 npm start          # start API (no watcher)
 ```
 
+## Code quality
+
+ESLint uses the flat config in `eslint.config.js` and covers both apps.
+
+```bash
+npm run lint       # report issues
+npm run lint:fix   # fix safe issues automatically
+```
+
+The config enables the ESLint, React, React Hooks, React Refresh and
+`jsx-a11y` recommended rules. Test files receive Vitest/Jest globals, and
+`react/prop-types` is off because the app does not use runtime prop types.
+
 ## Project conventions
 
 - JavaScript with ES modules (`"type": "module"`) everywhere.
