@@ -36,9 +36,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      # Published to host port so clients can reach the REST API.
-      - "${API_HOST_PORT:-5000}:5000"
+    # Security: No host port mapped. Traffic is proxied internally via the reverse proxy.
     networks:
       - backend-network
     environment:
@@ -47,7 +45,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://luffydev.duckdns.org,http://luffydev.duckdns.org}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_NAME: ${ADMIN_NAME:-Site Admin}
@@ -73,15 +71,13 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    ports:
-      # Published to host port for browser HTTP traffic.
-      - "${WEB_HOST_PORT:-8080}:80"
+    # Security: No host port mapped. Traffic is proxied internally via the reverse proxy.
     networks:
       - backend-network
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api}
-    # At container boot, if VITE_API_URL is configured, replace the baked
-    # fallback with the runtime public URL in static JS assets before Nginx starts.
+      # Use relative path /api so browser fetches from the same origin
+      VITE_API_URL: ${VITE_API_URL:-/api}
+    # At container boot, replace the baked fallback with the runtime public URL in static JS assets
     command:
       [
         "sh",
@@ -95,6 +91,46 @@ services:
       retries: 5
       start_period: 5s
 
+  # ---------------------------------------------------------------------------
+  # Nginx Reverse Proxy (Edge TLS termination & routing)
+  # ---------------------------------------------------------------------------
+  proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    # Edge entry point: Only ports 80 and 443 are published to the host
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot-etc:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ---------------------------------------------------------------------------
+  # Certbot (ACME client for Let's Encrypt TLS certificates)
+  # ---------------------------------------------------------------------------
+  certbot:
+    image: certbot/certbot:latest
+    restart: "no"
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    networks:
+      - backend-network
+
 networks:
   backend-network:
     name: devops-blog-prod-network
@@ -103,3 +139,7 @@ networks:
 volumes:
   devops-blog-postgres-data:
     name: devops-blog-prod-postgres-data
+  certbot-etc:
+    name: devops-blog-prod-certbot-etc
+  certbot-www:
+    name: devops-blog-prod-certbot-www
