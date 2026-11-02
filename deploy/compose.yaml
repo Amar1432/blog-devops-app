@@ -1,0 +1,105 @@
+# Production Docker Compose specification for DevOps Blog
+# Used for manual server deployment using pre-built images from GHCR.
+
+name: devops-blog-prod
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB must be set in .env}
+    # Security: No host ports mapped. The database is strictly accessible
+    # to services on the private backend-network only.
+    volumes:
+      - devops-blog-postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Express API (Node.js 22)
+  # ---------------------------------------------------------------------------
+  api:
+    image: ghcr.io/amar1432/devops-blog-api:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      # Published to host port so clients can reach the REST API.
+      - "${API_HOST_PORT:-5000}:5000"
+    networks:
+      - backend-network
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-Site Admin}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # Web Frontend (Nginx serving React)
+  # ---------------------------------------------------------------------------
+  web:
+    image: ghcr.io/amar1432/devops-blog-web:latest
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      # Published to host port for browser HTTP traffic.
+      - "${WEB_HOST_PORT:-8080}:80"
+    networks:
+      - backend-network
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api}
+    # At container boot, if VITE_API_URL is configured, replace the baked
+    # fallback with the runtime public URL in static JS assets before Nginx starts.
+    command:
+      [
+        "sh",
+        "-c",
+        "if [ -n \"$$VITE_API_URL\" ]; then sed -i \"s|http://localhost:5000/api|$$VITE_API_URL|g\" /usr/share/nginx/html/assets/*.js; fi && exec nginx -g 'daemon off;'",
+      ]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+networks:
+  backend-network:
+    name: devops-blog-prod-network
+    driver: bridge
+
+volumes:
+  devops-blog-postgres-data:
+    name: devops-blog-prod-postgres-data
