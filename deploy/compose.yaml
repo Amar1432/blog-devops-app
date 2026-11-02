@@ -131,6 +131,22 @@ services:
     networks:
       - backend-network
 
+  # ---------------------------------------------------------------------------
+  # Uptime Kuma (Availability & Health Monitoring)
+  # ---------------------------------------------------------------------------
+  uptime-kuma:
+    image: louislam/uptime-kuma:1.23.16
+    restart: unless-stopped
+    ports:
+      # Security: Bind strictly to loopback (127.0.0.1).
+      # Never expose port 3001 to 0.0.0.0 or through the public reverse proxy.
+      # Access locally via SSH tunnel: ssh -L 3001:127.0.0.1:3001 <user>@<host>
+      - "127.0.0.1:${UPTIME_KUMA_HOST_PORT:-3001}:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+    networks:
+      - backend-network
+
 networks:
   backend-network:
     name: devops-blog-prod-network
@@ -143,3 +159,5 @@ volumes:
     name: devops-blog-prod-certbot-etc
   certbot-www:
     name: devops-blog-prod-certbot-www
+  uptime-kuma-data:
+    name: devops-blog-prod-uptime-kuma-data

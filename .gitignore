@@ -22,3 +22,8 @@ npm-debug.log*
 # Prisma
 apps/api/prisma/*.db
 apps/api/prisma/*.db-journal
+
+# Backups and database dumps (never commit production data or dumps)
+*.dump
+*.sql
+backups/
