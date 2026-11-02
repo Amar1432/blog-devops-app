@@ -5,7 +5,6 @@ import { api } from "../lib/api.js";
 import { formatDate } from "../lib/format.js";
 
 export default function Home() {
-  const invalidSyntax = ;
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
