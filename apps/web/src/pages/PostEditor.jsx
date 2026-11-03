@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import MarkdownEditor from "../components/MarkdownEditor.jsx";
 import StatusMessage from "../components/StatusMessage.jsx";
 import { api } from "../lib/api.js";
 import { clearSession, getToken } from "../lib/auth.js";
@@ -158,16 +159,17 @@ export default function PostEditor() {
           />
         </label>
 
-        <label>
-          Content
-          <textarea
+        <div className="form-field">
+          <label htmlFor="post-content">Content</label>
+          <MarkdownEditor
+            id="post-content"
             name="content"
             value={form.content}
             onChange={handleChange}
             rows={16}
             required
           />
-        </label>
+        </div>
 
         <label className="checkbox-label">
           <input
