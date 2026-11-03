@@ -176,14 +176,18 @@ services:
 networks:
   backend-network:
     name: devops-blog-prod-network
-    driver: bridge
+    external: true
 
 volumes:
   devops-blog-postgres-data:
     name: devops-blog-prod-postgres-data
+    external: true
   certbot-etc:
     name: devops-blog-prod-certbot-etc
+    external: true
   certbot-www:
     name: devops-blog-prod-certbot-www
+    external: true
   uptime-kuma-data:
     name: devops-blog-prod-uptime-kuma-data
+    external: true
