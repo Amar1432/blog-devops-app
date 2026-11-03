@@ -1,6 +1,8 @@
 import { useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Check, Copy } from "lucide-react";
+import { Button } from "./ui/button.jsx";
 
 function getNodeText(node) {
   if (!node) return "";
@@ -29,14 +31,16 @@ function PreBlock({ children, ...props }) {
     <div className="code-block-container">
       <div className="code-block-header">
         <span className="code-block-label">Code</span>
-        <button
-          type="button"
-          className="copy-code-btn"
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5 border border-white/15 bg-white/10 px-2.5 text-xs text-slate-300 shadow-none hover:bg-white/15 hover:text-white"
           onClick={handleCopy}
           aria-label="Copy code to clipboard"
         >
+          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
           {copied ? "Copied!" : "Copy"}
-        </button>
+        </Button>
       </div>
       <pre {...props}>{children}</pre>
     </div>

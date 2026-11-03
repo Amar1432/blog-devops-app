@@ -54,8 +54,9 @@ describe("PostDetail", () => {
     expect(screen.getByText("A short excerpt")).toBeInTheDocument();
     expect(screen.getByText("The full article body")).toBeInTheDocument();
     expect(
-      screen.getByText(`${formatDate("2026-01-02T10:00:00.000Z")} · Ada`)
+      screen.getByText(formatDate("2026-01-02T10:00:00.000Z"))
     ).toBeInTheDocument();
+    expect(screen.getByText("Ada")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to all posts" })).toHaveAttribute(
       "href",
       "/"
