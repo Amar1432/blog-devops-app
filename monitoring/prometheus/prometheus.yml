@@ -1,0 +1,40 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+scrape_configs:
+  # ---------------------------------------------------------------------------
+  # Prometheus Self-Monitoring
+  # ---------------------------------------------------------------------------
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # ---------------------------------------------------------------------------
+  # Express API Application Metrics (/api/metrics)
+  # ---------------------------------------------------------------------------
+  - job_name: "devops-blog-api"
+    metrics_path: "/api/metrics"
+    static_configs:
+      - targets:
+          - "api:5000"
+          - "host.docker.internal:4000"
+    relabel_configs:
+      # Keep targets cleanly identified
+      - source_labels: [__address__]
+        target_label: instance
+
+  # ---------------------------------------------------------------------------
+  # Host & System Resource Metrics (Node Exporter)
+  # ---------------------------------------------------------------------------
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database Metrics (PostgreSQL Exporter)
+  # ---------------------------------------------------------------------------
+  - job_name: "postgres-exporter"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]

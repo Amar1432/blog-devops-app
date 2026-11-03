@@ -173,6 +173,111 @@ services:
     networks:
       - backend-network
 
+  # ---------------------------------------------------------------------------
+  # Prometheus (Metrics Collector)
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    restart: unless-stopped
+    logging: *default-logging
+    ports:
+      # Security: Bind strictly to loopback (127.0.0.1).
+      # Access locally via SSH tunnel: ssh -L 9090:127.0.0.1:9090 <user>@<host>
+      - "127.0.0.1:${PROMETHEUS_HOST_PORT:-9090}:9090"
+    volumes:
+      - ${PROMETHEUS_CONFIG_PATH:-/opt/devops-blog/monitoring/prometheus/prometheus.yml}:/etc/prometheus/prometheus.yml:ro
+      - ${PROMETHEUS_DATA_PATH:-/var/lib/docker/volumes/devops-blog-prod-prometheus-data/_data}:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--storage.tsdb.retention.size=5GB"
+      - "--web.enable-lifecycle"
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+    networks:
+      - backend-network
+
+  # ---------------------------------------------------------------------------
+  # Grafana (Metrics & Performance Dashboard)
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.5.2
+    restart: unless-stopped
+    logging: *default-logging
+    ports:
+      # Security: Bind strictly to loopback (127.0.0.1).
+      # Access locally via SSH tunnel: ssh -L 3000:127.0.0.1:3000 <user>@<host>
+      - "127.0.0.1:${GRAFANA_HOST_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
+    volumes:
+      - ${GRAFANA_PROVISIONING_PATH:-/opt/devops-blog/monitoring/grafana/provisioning}:/etc/grafana/provisioning:ro
+      - ${GRAFANA_DASHBOARDS_PATH:-/opt/devops-blog/monitoring/grafana/dashboards}:/var/lib/grafana/dashboards:ro
+      - ${GRAFANA_DATA_PATH:-/var/lib/docker/volumes/devops-blog-prod-grafana-data/_data}:/var/lib/grafana
+    deploy:
+      resources:
+        limits:
+          memory: 150M
+    depends_on:
+      - prometheus
+    networks:
+      - backend-network
+
+  # ---------------------------------------------------------------------------
+  # Node Exporter (Host System Resource Metrics)
+  # ---------------------------------------------------------------------------
+  node-exporter:
+    image: prom/node-exporter:v1.9.0
+    restart: unless-stopped
+    logging: *default-logging
+    pid: host
+    ports:
+      # Security: Bind strictly to loopback (127.0.0.1)
+      - "127.0.0.1:${NODE_EXPORTER_HOST_PORT:-9100}:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    deploy:
+      resources:
+        limits:
+          memory: 50M
+    networks:
+      - backend-network
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Exporter (Database Metrics)
+  # ---------------------------------------------------------------------------
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.16.0
+    restart: unless-stopped
+    logging: *default-logging
+    ports:
+      # Security: Bind strictly to loopback (127.0.0.1)
+      - "127.0.0.1:${POSTGRES_EXPORTER_HOST_PORT:-9187}:9187"
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable"
+    deploy:
+      resources:
+        limits:
+          memory: 50M
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend-network
+
 networks:
   backend-network:
     name: devops-blog-prod-network
