@@ -1,6 +1,7 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
+import { milestonePosts } from "./milestoneData.js";
 
 const prisma = new PrismaClient();
 
@@ -26,6 +27,31 @@ async function main() {
   });
 
   console.log(`Admin user ready: ${admin.email}`);
+
+  console.log(`Seeding ${milestonePosts.length} milestone posts...`);
+  for (const post of milestonePosts) {
+    await prisma.post.upsert({
+      where: { slug: post.slug },
+      update: {
+        title: post.title,
+        excerpt: post.excerpt,
+        content: post.content,
+        published: post.published,
+        publishedAt: post.publishedAt,
+        authorId: admin.id,
+      },
+      create: {
+        title: post.title,
+        slug: post.slug,
+        excerpt: post.excerpt,
+        content: post.content,
+        published: post.published,
+        publishedAt: post.publishedAt,
+        authorId: admin.id,
+      },
+    });
+    console.log(`✓ Post ready: ${post.title}`);
+  }
 }
 
 main()
