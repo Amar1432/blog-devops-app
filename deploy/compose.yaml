@@ -42,7 +42,8 @@ services:
   # Express API (Node.js 22)
   # ---------------------------------------------------------------------------
   api:
-    image: ${API_IMAGE:-ghcr.io/amar1432/devops-blog-api:latest}
+    image: ${API_IMAGE:-ghcr.io/amar1432/devops-blog-api:production}
+    pull_policy: always
     restart: unless-stopped
     logging: *default-logging
     depends_on:
@@ -78,7 +79,8 @@ services:
   # Web Frontend (Nginx serving React)
   # ---------------------------------------------------------------------------
   web:
-    image: ${WEB_IMAGE:-ghcr.io/amar1432/devops-blog-web:latest}
+    image: ${WEB_IMAGE:-ghcr.io/amar1432/devops-blog-web:production}
+    pull_policy: always
     restart: unless-stopped
     logging: *default-logging
     depends_on:

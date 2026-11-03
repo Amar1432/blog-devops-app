@@ -26,6 +26,14 @@ COPY apps/api/src ./apps/api/src
 # The generated client is written into the hoisted root node_modules/.prisma.
 RUN npm run db:generate --workspace=@devops-blog/api
 
+# Optimize image size:
+# Preserve generated .prisma client, then prune all devDependencies (jest, vitest, eslint, etc.)
+# and clean package manager caches before copying into the runtime stage.
+RUN cp -r node_modules/.prisma /tmp/.prisma \
+    && npm prune --omit=dev \
+    && cp -r /tmp/.prisma node_modules/.prisma \
+    && rm -rf /tmp/.prisma /root/.npm /tmp/*
+
 # --- Stage 2: runtime image ----------------------------------------------
 FROM node:22-bookworm-slim AS runtime
 

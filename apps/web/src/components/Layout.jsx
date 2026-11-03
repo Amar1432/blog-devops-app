@@ -41,7 +41,7 @@ export default function Layout() {
 
       <footer className="site-footer">
         <div className="container">
-          <p>DevOps Blog — built as a learning project.</p>
+          <p>DevOps Blog — automated deployment with Coolify &amp; GHCR.</p>
         </div>
       </footer>
     </div>

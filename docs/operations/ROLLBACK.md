@@ -54,36 +54,46 @@ docker images --filter "reference=ghcr.io/amar1432/*"
 
 ## 4. Application Rollback Execution Procedure
 
-### Step 1: Pin Target Image in Environment or CLI
-You can either pass the override as a command prefix or edit `/opt/devops-blog/.env`:
+### Method A: Rollback via Coolify Dashboard (Primary CD Path)
 
-#### Option A: Immediate CLI Execution
-```bash
-cd /opt/devops-blog
+If a deployment orchestrated by Coolify introduces an issue:
 
-# Rollback API container to a known-good commit SHA
-API_IMAGE=ghcr.io/amar1432/devops-blog-api:sha-<known-good-sha> docker compose pull api
-API_IMAGE=ghcr.io/amar1432/devops-blog-api:sha-<known-good-sha> docker compose up -d api
-```
+1. Open Coolify dashboard ➔ Go to your `devops-blog-prod` Compose resource.
+2. Go to **Environment Variables**.
+3. Set the image overrides to the previous known-good commit SHA tags:
+   ```env
+   API_IMAGE=ghcr.io/amar1432/devops-blog-api:sha-<previous-commit-sha>
+   WEB_IMAGE=ghcr.io/amar1432/devops-blog-web:sha-<previous-commit-sha>
+   ```
+4. Click **Deploy**.
+5. Coolify will pull the specified immutable tags and restart `api` and `web` containers.
+6. The PostgreSQL volume (`devops-blog-prod-postgres-data`) and Nginx configuration remain untouched.
 
-#### Option B: Persistent Pinning in `.env`
-Edit `/opt/devops-blog/.env`:
-```bash
-API_IMAGE=ghcr.io/amar1432/devops-blog-api:sha-<known-good-sha>
-WEB_IMAGE=ghcr.io/amar1432/devops-blog-web:sha-<known-good-sha>
-```
-Then execute:
-```bash
-docker compose pull api web
-docker compose up -d api web
-```
+---
 
-### Step 2: Confirm Container Recreation
-Verify that only the target container was updated and reached healthy state:
-```bash
-docker compose ps api web
-```
-The database and reverse proxy remain unaffected.
+### Method B: Emergency Fallback via Workload Host CLI (Direct Server Path)
+
+If Coolify or the control plane is offline:
+
+1. SSH into the OCI host:
+   ```bash
+   ssh devopsadmin@129.154.253.114
+   cd /opt/devops-blog
+   ```
+2. Edit `/opt/devops-blog/.env` to pin the previous release:
+   ```bash
+   API_IMAGE=ghcr.io/amar1432/devops-blog-api:sha-<previous-commit-sha>
+   WEB_IMAGE=ghcr.io/amar1432/devops-blog-web:sha-<previous-commit-sha>
+   ```
+3. Recreate the containers:
+   ```bash
+   docker compose pull api web
+   docker compose up -d api web
+   ```
+4. Confirm container health:
+   ```bash
+   docker compose ps api web
+   ```
 
 ---
 
@@ -156,13 +166,73 @@ curl -fsS https://luffydev.duckdns.org/api/posts | grep -q "First Production Pos
 
 ---
 
-## 7. Failure Handling During Rollback
+## 7. Diagnostic Troubleshooting & Failure Handling
 
-If a rollback image cannot be pulled or fails to start:
-1. **Missing Image on Registry**:
-   Check if the image tag exists on GHCR (`https://github.com/Amar1432/devops-blog/pkgs/container/devops-blog-api`). If an old SHA was pruned from GHCR, select the local image digest from `docker images` on the server and deploy via digest reference (`API_IMAGE=ghcr.io/amar1432/devops-blog-api@sha256:...`).
-2. **Container Crashloop on Startup**:
-   Inspect startup logs: `docker compose logs --tail=100 api`.
-   Verify environment variables in `.env`.
-3. **Database Incompatibility**:
-   If an application change included a non-backwards-compatible schema migration that prevents older application images from reading the database, an application-only rollback will fail. In this scenario, refer to the full disaster recovery runbook in [`BACKUP-AND-RESTORE.md`](./BACKUP-AND-RESTORE.md) to restore the database to the pre-migration backup.
+### Scenario A: Webhook Accepted (HTTP 200) but Deployment Failed
+- **Root Cause:** Coolify's webhook asynchronously queues the deployment. A 200 HTTP response only confirms the job was queued, not that Docker pull/reconcile succeeded.
+- **Troubleshooting Steps:**
+  1. Open Coolify dashboard ➔ Resource ➔ **Deployments**.
+  2. Inspect the latest deployment log stream.
+  3. Common issues:
+     - SSH timeout between Coolify VM and OCI server.
+     - Docker Compose parsing failure (check "Show Deployable Compose").
+     - Disk full on OCI server (`df -h`).
+
+### Scenario B: Deployment Succeeded but Public Site Returns 502/504 Bad Gateway
+- **Root Cause:** Nginx is running, but cannot reach upstream `api:5000` or `web:80` via Docker internal DNS.
+- **Troubleshooting Steps:**
+  1. Check if application containers are running:
+     ```bash
+     docker ps --format "{{.Names}}\t{{.Status}}"
+     ```
+  2. Verify network membership:
+     ```bash
+     docker network inspect devops-blog-prod-network
+     ```
+     Ensure `api`, `web`, and `proxy` are all connected to `devops-blog-prod-network`.
+  3. Inspect Nginx error log:
+     ```bash
+     docker logs devops-blog-prod-proxy-1 --tail 50
+     ```
+  4. Inspect API health check failures:
+     ```bash
+     docker logs devops-blog-prod-api-1 --tail 50
+     ```
+
+---
+
+## 8. Deployment Record Template
+
+Use this template to record production deployment verification and rollback events:
+
+```text
+=============================================================================
+PRODUCTION DEPLOYMENT RECORD
+=============================================================================
+Date/Time (UTC): 
+Release Trigger: [GitHub Actions CI / Manual Rollback]
+Git Commit SHA: 
+Triggered By: 
+
+Images Deployed:
+- API Image Tag: ghcr.io/amar1432/devops-blog-api:sha-<sha>
+- API Manifest Digest: sha256:...
+- Web Image Tag: ghcr.io/amar1432/devops-blog-web:sha-<sha>
+- Web Manifest Digest: sha256:...
+
+Coolify Deployment Status: [SUCCESS / FAILED]
+Coolify Deployment UUID: 
+
+Post-Deployment Verification:
+- Smoke Test Result: [PASS / FAIL] (./scripts/smoke-test.sh)
+- Homepage (HTTP 200): [PASS / FAIL]
+- /api/health (status:ok, db:up): [PASS / FAIL]
+- /api/posts: [PASS / FAIL]
+- Uptime Kuma Status: [UP / DOWN]
+- DB Volume devops-blog-prod-postgres-data Intact: [YES / NO]
+
+Rollback Executed: [YES / NO]
+- Rollback Target SHA: 
+- Root Cause (if applicable): 
+=============================================================================
+```

@@ -169,8 +169,10 @@ jobs:
           tags: |
             type=sha,prefix=sha-,format=short
             type=raw,value=latest
+            type=raw,value=production
 
       - name: Build and publish API image
+        id: build-api
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -190,8 +192,10 @@ jobs:
           tags: |
             type=sha,prefix=sha-,format=short
             type=raw,value=latest
+            type=raw,value=production
 
       - name: Build and publish Web image
+        id: build-web
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -202,3 +206,49 @@ jobs:
           labels: ${{ steps.meta-web.outputs.labels }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
+
+      - name: Generate build summary
+        run: |
+          echo "### Image Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Image:** \`ghcr.io/${{ steps.repo-owner.outputs.owner }}/devops-blog-api:production\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Digest:** \`${{ steps.build-api.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web Image:** \`ghcr.io/${{ steps.repo-owner.outputs.owner }}/devops-blog-web:production\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web Digest:** \`${{ steps.build-web.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
+
+  deploy:
+    name: Deploy to Production via Coolify
+    runs-on: ubuntu-latest
+    needs: [publish]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Trigger Coolify Deployment Webhook
+        env:
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          if [ -z "$COOLIFY_WEBHOOK" ]; then
+            echo "::error::COOLIFY_WEBHOOK secret is not configured"
+            exit 1
+          fi
+
+          echo "Triggering Coolify deployment for commit ${{ github.sha }}..."
+
+          AUTH_ARGS=()
+          if [ -n "$COOLIFY_TOKEN" ]; then
+            AUTH_ARGS=(-H "Authorization: Bearer $COOLIFY_TOKEN")
+          fi
+
+          # Execute webhook call without leaking secrets in stdout
+          HTTP_RESPONSE=$(curl -fsS -w "\n%{http_code}" -X POST "${AUTH_ARGS[@]}" "$COOLIFY_WEBHOOK" 2>&1)
+          HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n 1)
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "Coolify accepted deployment trigger (HTTP $HTTP_CODE)."
+            echo "### CD Deployment Trigger" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status:** Accepted by Coolify (HTTP $HTTP_CODE)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Commit Triggered:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "::error::Coolify deployment trigger failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
