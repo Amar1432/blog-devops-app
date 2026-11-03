@@ -227,6 +227,19 @@ docker compose up -d api web
 - **Result:** Pull requests run only `backend`, `frontend`, and unpushed `docker` build tests. `publish` and `deploy` jobs are skipped.
 - **Status:** **PASS**
 
+### Experiment 11.7.6 — Live Automated CI ➔ GHCR ➔ Coolify CD Release
+- **Objective:** Prove that a git push to `main` automatically tests, builds, publishes, and deploys without manual intervention.
+- **Action:** Pushed commit `8097356` with updated footer text and optimized API Dockerfile.
+- **Result:**
+  - GitHub Actions completed all 5 jobs (`backend`, `frontend`, `docker`, `publish`, `deploy`).
+  - Coolify Deployment `#4` (`vlq3z4ojooxlvho3ahmykw6v`) triggered via authenticated webhook.
+  - OCI server pulled `ghcr.io/amar1432/devops-blog-api:production` and `ghcr.io/amar1432/devops-blog-web:production`.
+  - API image size reduced from **910 MB** to **738 MB** (uncompressed) / **182 MB** (compressed download).
+  - Coolify deployment status: **`finished`**.
+  - Verified live frontend at `https://luffydev.duckdns.org`: displays `"DevOps Blog — automated deployment with Coolify & GHCR."`.
+  - All automated smoke tests passed (`./scripts/smoke-test.sh`).
+- **Status:** **PASS**
+
 ---
 
 ## 10. Definition of Done (DoD) Checklist
