@@ -32,6 +32,7 @@ function postPayload(input) {
 
 export async function listPublishedPosts(req, res, next) {
   try {
+    res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
     const posts = await prisma.post.findMany({
       where: { published: true },
       orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
@@ -45,6 +46,7 @@ export async function listPublishedPosts(req, res, next) {
 
 export async function getPublishedPost(req, res, next) {
   try {
+    res.set("Cache-Control", "public, max-age=60, stale-while-revalidate=120");
     const post = await prisma.post.findFirst({
       where: { slug: req.params.slug, published: true },
       select: detailSelect,
