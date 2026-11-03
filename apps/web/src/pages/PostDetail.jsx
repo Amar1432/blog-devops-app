@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import MarkdownRenderer from "../components/MarkdownRenderer.jsx";
 import StatusMessage from "../components/StatusMessage.jsx";
 import { api } from "../lib/api.js";
 import { formatDate } from "../lib/format.js";
@@ -53,7 +54,9 @@ export default function PostDetail() {
       </p>
       <h1>{post.title}</h1>
       {post.excerpt && <p className="lede">{post.excerpt}</p>}
-      <div className="article-body">{post.content}</div>
+      <div className="article-body">
+        <MarkdownRenderer content={post.content} />
+      </div>
       <p className="back-link">
         <Link to="/">Back to all posts</Link>
       </p>
