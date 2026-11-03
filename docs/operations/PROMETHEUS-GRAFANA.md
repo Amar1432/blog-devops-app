@@ -64,7 +64,7 @@ The observability stack runs as internal container services alongside the applic
 
 ## 3. Pre-Provisioned Grafana Dashboards
 
-Dashboards are automatically provisioned from [`monitoring/grafana/dashboards/`](file:///Users/amarjeet/Desktop/devops/monitoring/grafana/dashboards):
+Dashboards are automatically provisioned from [`deploy/monitoring/grafana/dashboards/`](file:///Users/amarjeet/Desktop/devops/deploy/monitoring/grafana/dashboards):
 
 | Dashboard | File | Metrics Covered |
 |-----------|------|-----------------|
@@ -72,7 +72,7 @@ Dashboards are automatically provisioned from [`monitoring/grafana/dashboards/`]
 | **Host & System Resources** | `host-metrics.json` | CPU utilization (%), memory utilization (%), root disk space (%), 1m system load, memory breakdown (buffers/cache/free), and network traffic I/O. |
 | **PostgreSQL Metrics** | `postgres-metrics.json` | Active connections, buffer cache hit ratio (%), database size, active table locks, commit/rollback rates, and tuple activity (fetch/insert/update/delete). |
 
-Datasource configuration is provisioned automatically at [`monitoring/grafana/provisioning/datasources/datasources.yml`](file:///Users/amarjeet/Desktop/devops/monitoring/grafana/provisioning/datasources/datasources.yml).
+Datasource configuration is provisioned automatically at [`deploy/monitoring/grafana/provisioning/datasources/datasources.yml`](file:///Users/amarjeet/Desktop/devops/deploy/monitoring/grafana/provisioning/datasources/datasources.yml).
 
 ---
 

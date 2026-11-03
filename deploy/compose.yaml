@@ -185,7 +185,7 @@ services:
       # Access locally via SSH tunnel: ssh -L 9090:127.0.0.1:9090 <user>@<host>
       - "127.0.0.1:${PROMETHEUS_HOST_PORT:-9090}:9090"
     volumes:
-      - ${PROMETHEUS_CONFIG_PATH:-../monitoring/prometheus/prometheus.yml}:/etc/prometheus/prometheus.yml:ro
+      - ${PROMETHEUS_CONFIG_PATH:-./monitoring/prometheus/prometheus.yml}:/etc/prometheus/prometheus.yml:ro
       - ${PROMETHEUS_DATA_PATH:-/var/lib/docker/volumes/devops-blog-prod-prometheus-data/_data}:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -217,8 +217,8 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SERVER_SERVE_FROM_SUB_PATH: "false"
     volumes:
-      - ${GRAFANA_PROVISIONING_PATH:-../monitoring/grafana/provisioning}:/etc/grafana/provisioning:ro
-      - ${GRAFANA_DASHBOARDS_PATH:-../monitoring/grafana/dashboards}:/var/lib/grafana/dashboards:ro
+      - ${GRAFANA_PROVISIONING_PATH:-./monitoring/grafana/provisioning}:/etc/grafana/provisioning:ro
+      - ${GRAFANA_DASHBOARDS_PATH:-./monitoring/grafana/dashboards}:/var/lib/grafana/dashboards:ro
       - ${GRAFANA_DATA_PATH:-/var/lib/docker/volumes/devops-blog-prod-grafana-data/_data}:/var/lib/grafana
     deploy:
       resources:
