@@ -28,6 +28,9 @@ async function main() {
 
   console.log(`Admin user ready: ${admin.email}`);
 
+  const deleteResult = await prisma.post.deleteMany({});
+  console.log(`Deleted ${deleteResult.count} existing posts.`);
+
   console.log(`Seeding ${milestonePosts.length} milestone posts...`);
   for (const post of milestonePosts) {
     await prisma.post.upsert({
