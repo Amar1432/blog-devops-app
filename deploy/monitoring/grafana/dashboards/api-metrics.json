@@ -29,8 +29,13 @@
       "targets": [
         {
           "expr": "sum(rate(http_requests_total{app=\"devops-blog-api\"}[1m]))",
-          "legendFormat": "Total Throughput",
+          "legendFormat": "Cluster Total",
           "refId": "A"
+        },
+        {
+          "expr": "sum by (instance) (rate(http_requests_total{app=\"devops-blog-api\"}[1m]))",
+          "legendFormat": "{{instance}}",
+          "refId": "B"
         }
       ],
       "title": "Total Request Rate (RPS)",

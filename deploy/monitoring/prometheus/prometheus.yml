@@ -17,13 +17,15 @@ scrape_configs:
   - job_name: "devops-blog-api"
     metrics_path: "/api/metrics"
     static_configs:
-      - targets:
-          - "api:5000"
-          - "host.docker.internal:4000"
-    relabel_configs:
-      # Keep targets cleanly identified
-      - source_labels: [__address__]
-        target_label: instance
+      - targets: ["api:5000"]
+        labels:
+          instance: "server-1-primary"
+      - targets: ["10.0.0.204:80"]
+        labels:
+          instance: "server-2-worker"
+      - targets: ["host.docker.internal:4000"]
+        labels:
+          instance: "local-dev"
 
   # ---------------------------------------------------------------------------
   # Host & System Resource Metrics (Node Exporter)
@@ -31,6 +33,11 @@ scrape_configs:
   - job_name: "node-exporter"
     static_configs:
       - targets: ["node-exporter:9100"]
+        labels:
+          instance: "server-1-primary"
+      - targets: ["10.0.0.204:9100"]
+        labels:
+          instance: "server-2-worker"
 
   # ---------------------------------------------------------------------------
   # PostgreSQL Database Metrics (PostgreSQL Exporter)
@@ -38,3 +45,5 @@ scrape_configs:
   - job_name: "postgres-exporter"
     static_configs:
       - targets: ["postgres-exporter:9187"]
+        labels:
+          instance: "server-1-primary"

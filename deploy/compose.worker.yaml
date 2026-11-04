@@ -93,6 +93,26 @@ services:
       retries: 5
       start_period: 5s
 
+  # ---------------------------------------------------------------------------
+  # Node Exporter (Host System Resource Metrics)
+  # ---------------------------------------------------------------------------
+  node-exporter:
+    image: prom/node-exporter:v1.9.0
+    restart: unless-stopped
+    logging: *default-logging
+    pid: host
+    ports:
+      # Expose on internal VCN IP for Server 1's Prometheus scraper
+      - "${NODE_EXPORTER_BIND_IP:-10.0.0.204}:${NODE_EXPORTER_HOST_PORT:-9100}:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+
 networks:
   backend-network:
     driver: bridge

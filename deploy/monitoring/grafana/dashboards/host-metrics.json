@@ -36,7 +36,7 @@
       "targets": [
         {
           "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[1m])) * 100)",
-          "legendFormat": "CPU Busy",
+          "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
@@ -65,7 +65,7 @@
       "targets": [
         {
           "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
-          "legendFormat": "RAM Used",
+          "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
@@ -94,7 +94,7 @@
       "targets": [
         {
           "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=~\"/rootfs|/\"} or vector(0)) / (node_filesystem_size_bytes{mountpoint=~\"/rootfs|/\"} > 0) * 100)",
-          "legendFormat": "Disk Used",
+          "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
@@ -123,7 +123,7 @@
       "targets": [
         {
           "expr": "node_load1",
-          "legendFormat": "1m Load",
+          "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
@@ -183,13 +183,13 @@
       "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
       "targets": [
         {
-          "expr": "sum(rate(node_network_receive_bytes_total{device!~\"lo|veth.*|docker.*|br.*\"}[1m]))",
-          "legendFormat": "Network Received",
+          "expr": "sum by (instance) (rate(node_network_receive_bytes_total{device!~\"lo|veth.*|docker.*|br.*\"}[1m]))",
+          "legendFormat": "{{instance}} - RX",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(node_network_transmit_bytes_total{device!~\"lo|veth.*|docker.*|br.*\"}[1m]))",
-          "legendFormat": "Network Transmitted",
+          "expr": "sum by (instance) (rate(node_network_transmit_bytes_total{device!~\"lo|veth.*|docker.*|br.*\"}[1m]))",
+          "legendFormat": "{{instance}} - TX",
           "refId": "B"
         }
       ],
