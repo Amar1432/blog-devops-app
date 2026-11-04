@@ -225,6 +225,7 @@ jobs:
       - name: Trigger Coolify Deployment Webhook
         env:
           COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+          COOLIFY_WORKER_WEBHOOK: ${{ secrets.COOLIFY_WORKER_WEBHOOK }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: |
           if [ -z "$COOLIFY_WEBHOOK" ]; then
@@ -239,16 +240,34 @@ jobs:
             AUTH_ARGS=(-H "Authorization: Bearer $COOLIFY_TOKEN")
           fi
 
-          # Execute webhook call without leaking secrets in stdout
+          # 1. Trigger Server 1 (Primary Workload Host)
+          echo "Triggering Primary Server deployment..."
           HTTP_RESPONSE=$(curl -fsS -w "\n%{http_code}" -X POST "${AUTH_ARGS[@]}" "$COOLIFY_WEBHOOK" 2>&1)
           HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n 1)
 
           if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-            echo "Coolify accepted deployment trigger (HTTP $HTTP_CODE)."
-            echo "### CD Deployment Trigger" >> $GITHUB_STEP_SUMMARY
-            echo "- **Status:** Accepted by Coolify (HTTP $HTTP_CODE)" >> $GITHUB_STEP_SUMMARY
-            echo "- **Commit Triggered:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "Coolify accepted Primary deployment trigger (HTTP $HTTP_CODE)."
           else
-            echo "::error::Coolify deployment trigger failed with HTTP $HTTP_CODE"
+            echo "::error::Coolify Primary deployment trigger failed with HTTP $HTTP_CODE"
             exit 1
           fi
+
+          # 2. Trigger Server 2 (Worker Host) if configured
+          WORKER_STATUS="Not configured"
+          if [ -n "$COOLIFY_WORKER_WEBHOOK" ]; then
+            echo "Triggering Worker Server deployment..."
+            WORKER_RESPONSE=$(curl -fsS -w "\n%{http_code}" -X POST "${AUTH_ARGS[@]}" "$COOLIFY_WORKER_WEBHOOK" 2>&1)
+            WORKER_CODE=$(echo "$WORKER_RESPONSE" | tail -n 1)
+            if [ "$WORKER_CODE" -ge 200 ] && [ "$WORKER_CODE" -lt 300 ]; then
+              echo "Coolify accepted Worker deployment trigger (HTTP $WORKER_CODE)."
+              WORKER_STATUS="Accepted (HTTP $WORKER_CODE)"
+            else
+              echo "::error::Coolify Worker deployment trigger failed with HTTP $WORKER_CODE"
+              exit 1
+            fi
+          fi
+
+          echo "### CD Deployment Trigger" >> $GITHUB_STEP_SUMMARY
+          echo "- **Primary Host:** Accepted by Coolify (HTTP $HTTP_CODE)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Worker Host:** $WORKER_STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit Triggered:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
