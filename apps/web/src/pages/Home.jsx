@@ -90,13 +90,13 @@ export default function Home() {
         <div className="absolute top-0 right-0 -mt-8 -mr-8 size-64 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-secondary/60 text-xs font-mono text-muted-foreground mb-4">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-secondary/60 text-xs font-mono text-muted-foreground mb-4">
             <span className="relative flex size-2">
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
             </span>
             <Terminal className="size-3.5 text-primary" />
-            <span className="eyebrow m-0 text-[11px] font-semibold text-foreground tracking-normal uppercase">
+            <span className="eyebrow mt-2.5 text-[11px] font-semibold text-foreground tracking-normal uppercase">
               Notes from the journey
             </span>
           </div>
@@ -106,7 +106,8 @@ export default function Home() {
           </h1>
 
           <p className="lede text-base sm:text-lg text-muted-foreground leading-relaxed max-w-xl mb-6">
-            Short, practical write-ups about shipping, operating and understanding software.
+            Short, practical write-ups about shipping, operating and
+            understanding software.
           </p>
 
           <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-muted-foreground">
@@ -130,11 +131,15 @@ export default function Home() {
       <section aria-labelledby="posts-heading" className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border/60">
           <div>
-            <h2 id="posts-heading" className="section-title text-base font-semibold tracking-tight text-foreground m-0">
+            <h2
+              id="posts-heading"
+              className="section-title text-base font-semibold tracking-tight text-foreground m-0"
+            >
               Latest posts
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {!loading && `${filteredPosts.length} ${filteredPosts.length === 1 ? "article" : "articles"} published`}
+              {!loading &&
+                `${filteredPosts.length} ${filteredPosts.length === 1 ? "article" : "articles"} published`}
             </p>
           </div>
 
@@ -185,7 +190,9 @@ export default function Home() {
         {/* Loading state */}
         {loading && (
           <div className="space-y-4">
-            <p className="muted text-sm text-muted-foreground">Loading posts...</p>
+            <p className="muted text-sm text-muted-foreground">
+              Loading posts...
+            </p>
             <div className="grid gap-4">
               {[1, 2, 3].map((i) => (
                 <Card key={i} className="p-6 space-y-3">
@@ -212,23 +219,26 @@ export default function Home() {
           </StatusMessage>
         )}
 
-        {!loading && !error && posts.length > 0 && filteredPosts.length === 0 && (
-          <div className="text-center py-12 border border-dashed border-border rounded-xl p-8 space-y-3">
-            <p className="text-sm text-muted-foreground">
-              No posts matched your search for &ldquo;{searchQuery}&rdquo;.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery("");
-                setActiveCategory("all");
-              }}
-              className="text-xs font-semibold text-primary underline underline-offset-4"
-            >
-              Reset search &amp; filters
-            </button>
-          </div>
-        )}
+        {!loading &&
+          !error &&
+          posts.length > 0 &&
+          filteredPosts.length === 0 && (
+            <div className="text-center py-12 border border-dashed border-border rounded-xl p-8 space-y-3">
+              <p className="text-sm text-muted-foreground">
+                No posts matched your search for &ldquo;{searchQuery}&rdquo;.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setActiveCategory("all");
+                }}
+                className="text-xs font-semibold text-primary underline underline-offset-4"
+              >
+                Reset search &amp; filters
+              </button>
+            </div>
+          )}
 
         {/* Post cards list */}
         <div className="post-list grid gap-4">
@@ -239,13 +249,19 @@ export default function Home() {
             >
               <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <p className="post-meta m-0 text-xs text-muted-foreground flex items-center gap-1.5 font-mono">
-                  <CalendarDays className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                  <CalendarDays
+                    className="size-3.5 text-muted-foreground"
+                    aria-hidden="true"
+                  />
                   <span>
                     {formatDate(post.publishedAt || post.createdAt)}
                     {post.author?.name ? ` · ${post.author.name}` : ""}
                   </span>
                 </p>
-                <Badge variant="secondary" className="text-[11px] font-normal text-muted-foreground gap-1">
+                <Badge
+                  variant="secondary"
+                  className="text-[11px] font-normal text-muted-foreground gap-1"
+                >
                   <Clock3 className="size-3" aria-hidden="true" />
                   {getReadingTime(post.content || post.excerpt)} min read
                 </Badge>
@@ -269,7 +285,10 @@ export default function Home() {
                   className="read-more inline-flex items-center gap-1.5 text-xs font-semibold text-foreground group-hover:text-primary transition-colors"
                 >
                   <span>Read post</span>
-                  <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                  <ArrowRight
+                    className="size-3.5 transition-transform group-hover:translate-x-1"
+                    aria-hidden="true"
+                  />
                 </Link>
               </div>
             </article>
